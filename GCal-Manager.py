@@ -3,9 +3,9 @@ import openai
 from openai import OpenAI
 
 # Set environment variables
-my_api_key = os.getenv('OPENAI_KEY')
+my_api_key = os.getenv('OPENAI_API_KEY')
 
-# openai.api_key = my_api_key
+openai.api_key = my_api_key
 
 
 # Test Queries
