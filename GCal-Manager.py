@@ -1,6 +1,3 @@
-# GCal-Manager
-A manager application for Google Calendar using ChatGPT API and Google Calendar API
-
 import os 
 import openai
 from openai import OpenAI
@@ -26,12 +23,3 @@ completion = client.chat.completions.create(
     ]
 )
 print(completion.choices[0].message.content) 
-
-
-
-# Set up Git-Mob
-# git mob partner_initials
-# git add file_name
-# git commit -m "commit message"
-# git push
-
