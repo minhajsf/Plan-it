@@ -35,3 +35,5 @@ print(completion.choices[0].message.content)
 # git commit -m "commit message"
 # git push
 
+# Ask first for options
+# Then prompt

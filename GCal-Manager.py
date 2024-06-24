@@ -1,11 +1,14 @@
 import os 
 import openai
+from dotenv import load_dotenv
 from openai import OpenAI
+
+load_dotenv()
 
 # Set environment variables
 my_api_key = os.getenv('OPENAI_API_KEY')
 
-openai.api_key = my_api_key
+# openai.api_key = my_api_key
 
 
 # Test Queries

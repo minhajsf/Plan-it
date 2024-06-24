@@ -1,0 +1,60 @@
+
+# Option Select
+ -- Create Event
+ -- Query Event
+ -- Delete Event
+
+# Get query
+
+# Run query into ChatGPT API using option-specific formating
+
+# Ex. Add New Event
+# Optional = Location, Description, Notification, Color 
+"
+For your response, input the following prompt information in the format
+below: "YOUR_PROMPT_HERE"
+
+Title: "insert title"
+Date: 00/00/0000
+Time: 00:00 AP/PM
+Location: Online/Address
+Description: "insert description or link"
+Notification: X minutes
+Color: "insert color"
+"
+
+# For Create Event Format it in a way like a dictionary
+
+substring = starting from keyword "Title:"
+string_to_dictionary(substring)
+{Title: "insert",... etc.}
+Google Calendar API createEvent(){}
+
+# Database
+Query_ID, Query_Type, Time, Information
+Query_Type = {create, remove, edit, pull}
+
+
+# Description
+If the description includes a link to be shared with others, do so 
+Else, just include the link
+
+
+# Notification
+Default of 10 minutes
+Else, include notification in minutes.
+
+
+# Color
+If the user inputs a specific event type in they're prompt check with
+the Calendar for associated color. Sama if they input a color and their
+calendar has it set as an event type.
+Else, default to Peacock (light blue).
+
+
+# Additional: 
+
+Set recurring meeting
+
+For pull (pulling information from calendar) queries, if the specific
+query has been answered before, spit out the existing record.
