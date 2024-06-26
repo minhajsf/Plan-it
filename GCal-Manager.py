@@ -4,140 +4,186 @@ import json
 from dotenv import load_dotenv
 from openai import OpenAI
 
+# USE COMMAND pip install -r requirements.txt
+# Then pip freeze > requirements.txt
+# To automate the installation of the imports
 
 
+#Google Imports
+import datetime
+from datetime import datetime
+from tzlocal import get_localzone
+import os.path
+import urllib3
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
-# Get OPENAI_API_KEY from environment variables
-load_dotenv()
-my_api_key = os.getenv('OPENAI_API_KEY')
+SCOPES = ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/calendar.events']
+
+def main():
+  
+    # Get OPENAI_API_KEY from environment variables
+    load_dotenv()
+    my_api_key = os.getenv('OPENAI_API_KEY')
 
 
-# Create an OpenAPI client using the API key
-client = OpenAI(
-    api_key=my_api_key,
-)
-
-
-# Get event type from user
-eventType = str(input("What type of event would you like to do? (Create, Update, Remove):"))
-
-# Get the user's request
-prompt = str(input("enter prompt here:"))
-
-
-# Insert Event
-if eventType == "Create":
-
-    #create a prompt for GPT API
-    insert_format_instruction = f"""
-    For your response input the following prompt information in the format below as a valid JSON object (start your response at the first left curly brace of the event dictionary): 
-
-    {prompt}
-
-    event = {{
-    "summary": "insert_summary_here",
-    "location": "street_address, city, state ZIP_code",
-    "description": "description_here",
-    "start": {{
-        "dateTime": "2015-05-28T09:00:00-07:00",
-        "timeZone": "America/Los_Angeles"
-    }},
-    "end": {{
-        "dateTime": "2015-05-28T17:00:00-07:00",
-        "timeZone": "America/Los_Angeles"
-    }},
-    "reminders": {{
-        "useDefault": True
-    }}
-    }}
-    """
-    # Send ChatGPT the user's prompt and store the response (event dictionary)
-    completion = client.chat.completions.create(
-    model="gpt-3.5-turbo",
-    messages=[
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": insert_format_instruction}
-    ]
+    # Create an OpenAPI client using the API key
+    client = OpenAI(
+        api_key=my_api_key,
     )
+    # GOOGLE CALENDAR API
 
-    # prints the response from GPT
-    print(completion.choices[0].message.content) 
+    creds = None
+    # The file token.json stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
+    if os.path.exists("token.json"):
+        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                "credentials.json", SCOPES
+            )
+            creds = flow.run_local_server(port=8080)  # Specify a fixed port here
+        with open("token.json", "w") as token:
+            token.write(creds.to_json())
+    try:
+        service = build("calendar", "v3", credentials=creds)
+        
+    except HttpError as error:
+        # Name of the file to be deleted
+        filename = "token.json"
+        # Delete the file
+        if os.path.exists(filename):
+            os.remove(filename)
+            print(f"{filename} has been deleted.")
+        else:
+            print(f"{filename} does not exist.")
 
-    # Converts response string to a dictionary
-    insert_event_dict = json.loads(completion.choices[0].message.content)
+        print(f"An error occurred: {error}")
+        main()
 
-    # Creates new event in calendar
-    insert_event = service.events().insert(calendarId='primary', body=event_dict).execute()
+    # Get event type from user
+    eventType = str(input("What type of event would you like to do? (Create, Update, Remove): "))
 
-    # Get event id
-    event_id = insert_event['id'] 
-    
-    print ('Event created: %s', event.get('htmlLink'))
-
-# Update Event
-elif eventType == "Update": 
-
-    print("Implement soon")
-
-# Remove Event
-elif eventType == "Remove":
-
-    print("Implement soon")
-
-# User inputted incorrect event type
-else:
-
-    print("Please try again with a correct event type (Insert, Update, Remove).")
-    exit(1)
-
-prompt = "Can you create an event for Check-in with Brooke this Wednesday at 2PM"
-
-#event_id = completion['id']
-
-# print(create_format_instruction)
-# edit_format_instruction = None
-# remove_format_instruction = None
-
-# from google.oauth2 import service_account
-# from googleapiclient.discovery import build
-
-# # Load credentials from a service account key file
-# credentials = service_account.Credentials.from_service_account_file(
-#     'path/to/your/service-account-key.json',
-#     scopes=['https://www.googleapis.com/auth/calendar']
-# )
-
-# # Build the Calendar API service
-# service = build('calendar', 'v3', credentials=credentials)
-
-# # Example event ID to update
-# event_id = 'your_event_id_here'
-
-# # Prepare the update object
-# update = {
-#     'summary': 'Updated Event Title',
-#     'description': 'Updated event description.',
-#     'start': {
-#         'dateTime': '2024-06-25T10:00:00',
-#         'timeZone': 'America/Los_Angeles',
-#     },
-#     'end': {
-#         'dateTime': '2024-06-25T12:00:00',
-#         'timeZone': 'America/Los_Angeles',
-#     },
-#     'location': 'Updated Location',
-# }
-
-# # Update the event
-# updated_event = service.events().update(
-#     calendarId='primary',
-#     eventId=event_id,
-#     body=update
-# ).execute()
-
-# print('Event updated: %s' % updated_event.get('htmlLink'))
+    # Get the user's request
+    prompt = str(input("enter prompt here: "))
 
 
+    # Insert Event
+    if eventType == "Create":
+
+        # PROMPT
+        # I have a meeting with Brooke tommorow at noon. It is interview so I need to bring my resume. It's at the Starbucks on 114th and Broadway. Can you add it to my calendar?
+        # get localhost time zone
+        timeZone = get_localzone()
+  
+        # get current dateTime in ISO 8601
+        current_datetime = datetime.now()
+
+        
+
+        #create a prompt for GPT API
+        insert_format_instruction = f"""
+        For your response input the following prompt information in the format below as a valid JSON object (start your response at the first left curly brace of the event dictionary) understand that the current time is currently {current_datetime}: 
+
+        {prompt}
+
+        event = {{
+        "summary": "insert_title_here",
+        "description": "any extra specifications, locations, and descriptions here",
+        "start": {{
+            "dateTime": " "2015-05-28T09:00:00-07:00",
+            "timeZone": "{timeZone}"
+        }},
+        "end": {{
+            "dateTime": "2015-05-28T17:00:00-07:00",
+            "timeZone": "{timeZone}"
+        }},
+        "reminders": {{
+            "useDefault": True
+        }}
+        }}
+        """
+        # Send ChatGPT the user's prompt and store the response (event dictionary)
+        completion = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": insert_format_instruction}
+        ]
+        )
+
+        # prints the response from GPT
+        print(completion.choices[0].message.content) 
+
+        # Converts response string to a dictionary
+        insert_event_dict = json.loads(completion.choices[0].message.content)
+
+        # Creates new event in calendar
+        insert_event = service.events().insert(calendarId='primary', body=insert_event_dict).execute()
+
+        # Get event id
+        insert_event_id = insert_event['id'] 
+        
+        print ('Event created: %s', insert_event.get('htmlLink'))
+
+    # Update Event
+    elif eventType == "Update": 
+
+        print("Implement soon")
+
+        update_format_instruction = None
+
+        # Prepare the update object
+        # update = {
+        #     'summary': 'Updated Event Title',
+        #     'description': 'Updated event description.',
+        #     'start': {
+        #         'dateTime': '2024-06-25T10:00:00',
+        #         'timeZone': 'America/Los_Angeles',
+        #     },
+        #     'end': {
+        #         'dateTime': '2024-06-25T12:00:00',
+        #         'timeZone': 'America/Los_Angeles',
+        #     },
+        #     'location': 'Updated Location',
+        # }
+
+        # # Update the event
+        # updated_event = service.events().update(
+        #     calendarId='primary',
+        #     eventId=event_id,
+        #     body=update
+        # ).execute()
+
+        # print('Event updated: %s' % updated_event.get('htmlLink'))
+
+    # Remove Event
+    elif eventType == "Remove":
+
+        print("Implement soon")
+
+    # User inputted incorrect event type
+    else:
+
+        print("Please try again with a correct event type (Insert, Update, Remove).")
+        exit(1)
+
+#if __name__ == "__main__":
+#  main()
+
+
+
+
+    # remove_format_instruction = None
+
+main()
 
 # Google API
 # event = {
@@ -168,22 +214,8 @@ prompt = "Can you create an event for Check-in with Brooke this Wednesday at 2PM
 #   },
 # }
 
-# event = service.events().insert(calendarId='primary', body=event).execute()
-# print 'Event created: %s' % (event.get('htmlLink'))
 
-
-# Specify the model to use and the messages to send
-# completion = client.chat.completions.create(
-#     model="gpt-3.5-turbo",
-#     messages=[
-#         {"role": "system", "content": "You are a helpful assistant."},
-#         {"role": "user", "content": create_format_instruction}
-#     ]
-# )
-# print(completion.choices[0].message.content) 
-
-
-
+# Edit Event
 # # First retrieve the event from the API.
 # event = service.events().get(calendarId='primary', eventId='eventId').execute()
 
@@ -193,3 +225,5 @@ prompt = "Can you create an event for Check-in with Brooke this Wednesday at 2PM
 
 # # Print the updated date.
 # print updated_event['updated']
+
+# If modifying these scopes, delete the file token.json.
