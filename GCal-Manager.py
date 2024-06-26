@@ -3,6 +3,11 @@ import openai
 import json
 from dotenv import load_dotenv
 from openai import OpenAI
+from db import db
+from db import Event
+from flask import Flask
+from flask import request
+
 
 # USE COMMAND pip install -r requirements.txt
 # Then pip freeze > requirements.txt
@@ -21,10 +26,32 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+
+
+def get_events():
+    """
+    Endpoint for getting all events.
+    """
+    events = [event.serialize() for event in Event.query.all()]
+    return events
+
+
 SCOPES = ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/calendar.events']
 
 def main():
   
+    app = Flask(__name__)
+    db_filename = "calendar.db"
+
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///%s" % db_filename
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SQLALCHEMY_ECHO"] = True
+
+    db.init_app(app)
+    with app.app_context():
+        db.create_all()
+
+    
     # Get OPENAI_API_KEY from environment variables
     load_dotenv()
     my_api_key = os.getenv('OPENAI_API_KEY')
@@ -55,7 +82,7 @@ def main():
     try:
         service = build("calendar", "v3", credentials=creds)
         
-    except HttpError as error:
+    except:
         # Name of the file to be deleted
         filename = "token.json"
         # Delete the file
@@ -128,15 +155,28 @@ def main():
         # Creates new event in calendar
         insert_event = service.events().insert(calendarId='primary', body=insert_event_dict).execute()
 
+    
         # Get event id
         insert_event_id = insert_event['id'] 
+        # Add to database
+        new_event = Event(event_type = eventType,title = insert_event_dict.get("summary"), description = insert_event_dict.get("description"), start = insert_event_dict.get("start").get("dateTime"), end = insert_event_dict.get("end").get("dateTime"), event_id = insert_event_id)
+        db.session.add(new_event)
+        db.session.commit()
+        print(get_events)
         
-        print ('Event created: %s', insert_event.get('htmlLink'))
+        print('Event created: %s', insert_event.get('htmlLink'))
 
     # Update Event
     elif eventType == "Update": 
 
-        print("Implement soon")
+        # print("Implement soon")
+
+        # get most important word in the event title from prompt
+        # search word in database_entry.title
+
+        # print("Is this the event you are looking for? (y/n) ")
+        # if not, continue search
+
 
         update_format_instruction = None
 
