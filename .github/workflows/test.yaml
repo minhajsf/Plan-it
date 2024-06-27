@@ -17,4 +17,4 @@ jobs:
 
       - name: Test with unittest
         working-directory: ./GCal-Manager
-        run: python3 -m unittest test_calendar.py
+        run: python -m unittest test_calendar.py

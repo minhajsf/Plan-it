@@ -123,7 +123,7 @@ def main():
         at the first left curly brace of the event dictionary.
         Understand that the current time is currently.
         Don't change anything about any attributes that the user
-        does not give a specification to (including case of 
+        does not give a specification to (including case of
         characters). PLEASE LEAVE True as True not lowercase true.
         {current_datetime}:
 
@@ -224,7 +224,7 @@ def main():
         attributes the same if no changes are mentioned/if the change
         is redundant (same info as current event).
         Don't change anything about any attributes that the user
-        does not give a specification to (including case of 
+        does not give a specification to (including case of
         characters). PLEASE LEAVE True as True not lowercase true.
         prompt = "{event_update}"
 
