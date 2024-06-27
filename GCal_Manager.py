@@ -40,39 +40,37 @@ SCOPES = ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.co
 
 def main():
   
+    # DATABASE SETUP
     app = Flask(__name__)
     db_filename = "calendar.db"
 
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///%s" % db_filename
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-
-
     # Print SQLAlchemy INFO logs (True) Silence SQLAlchemy INFO logs (False)
     app.config["SQLALCHEMY_ECHO"] = False
-
-
 
     db.init_app(app)
     with app.app_context():
         db.create_all()
 
+
+    # CHATGPT API
     # Get OPENAI_API_KEY from environment variables
     load_dotenv()
     my_api_key = os.getenv('OPENAI_API_KEY')
-
 
     # Create an OpenAPI client using the API key
     client = OpenAI(
         api_key=my_api_key,
     )
-    # GOOGLE CALENDAR API
 
+
+    # GOOGLE CALENDAR API
     creds = None
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    
     if os.path.exists("token.json"):
         creds = Credentials.from_authorized_user_file("token.json", SCOPES)
     if not creds or not creds.valid:
@@ -98,12 +96,11 @@ def main():
             print(f"{filename} does not exist.")
         main()
 
+
     # Get event type from user
     eventType = str(input("\nWhat type of event would you like to do? (Create, Update, Remove): "))
 
-
-
-    # Insert Event
+    # Create Event
     if eventType == "Create":
 
         prompt = str(input(f"\nYou are going to Create an Event! Enter your prompt here: \n"))
@@ -182,13 +179,6 @@ def main():
             db.session.add(new_event)
             db.session.commit()
 
-        # print all records in calendar.db
-
-        # with app.app_context():
-        #     results = Event.query.all()
-        #     for event in results:
-        #         print(f"Type: {event.event_type}, Title: {event.title}, Start: {event.start}, End: {event.end}, Description: {event.description}, Event ID: {event.event_id}")
-
         print(event_description)
         print('Event created! Check your Google Calendar to confirm!\n')
         
@@ -196,14 +186,6 @@ def main():
 
     # Update Event
     elif eventType == "Update": 
-
-        # ALTERNATE APPROACH
-        # get most important word in the event title from prompt
-        # search word in database_entry.title
-        # print("Is this the event you are looking for? (y/n) ")
-        # if not, continue search
-
-
 
         # get the exact title of event from user
         event_title = str(input('\nYou are going to Update an event! Which event on your calendar would you like to update? (Exact title): '))
@@ -228,6 +210,7 @@ def main():
         {current_event}
 
         '''
+
         completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
@@ -243,22 +226,38 @@ def main():
         # print(response)
 
         # Converts response string to a dictionary
-        update_event_dict = eval(response)
+        updated_event_dict = eval(response)
 
-        print("Updated Event: \nEvent - Title: " + update_event_dict["summary"] + "\t\tDescription: " + update_event_dict["description"] + "\nStart Time: " + update_event_dict["start"]["dateTime"] + "\t\t\tEnd Time: " + update_event_dict["end"]["dateTime"] + "\n") 
+        event_description = "\nUpdated Event: \nEvent - Title: " + updated_event_dict["summary"] + "\t\tDescription: " + updated_event_dict["description"] + "\nStart Time: " + updated_event_dict["start"]["dateTime"] + "\t\t\tEnd Time: " + updated_event_dict["end"]["dateTime"] + "\n"
 
-
-        # Prepare the update object
-        update = update_event_dict
 
         # # Update the event
         updated_event = service.events().update(
             calendarId='primary',
             eventId=current_event_id,
-            body=update
+            body= updated_event_dict
         ).execute()
 
+        # Get the event id
+        updated_event_id = updated_event['id'] 
+        # Add to database
+        with app.app_context():
+        # Add to database
+            new_event = Event(
+                event_type = eventType,
+                title = updated_event_dict.get("summary"), 
+                description = updated_event_dict.get("description"), 
+                start = updated_event_dict.get("start").get("dateTime"), 
+                end = updated_event_dict.get("end").get("dateTime"), 
 
+                # leave the event_id as the the Create event id. This is to keep track of which event you updated
+                event_id = current_event_id,
+                event_dictionary = response
+            )
+            db.session.add(new_event)
+            db.session.commit()
+
+        print(event_description) 
         print('Event Updated! Check your Google Calendar to confirm!\n')
 
         # print('Event updated: %s' % updated_event.get('htmlLink'))
@@ -266,23 +265,63 @@ def main():
     # Remove Event
     elif eventType == "Remove":
 
-        print("Implement soon")
+        # get the exact title of event from user
+        event_title = str(input('\nYou are going to Remove an event! Which event on your calendar would you like to remove? (Exact title): '))
 
+        
+        # perform a query on the database for the title
+        with app.app_context():
+            event = Event.query.filter_by(title = event_title).first()
+            current_event = event.event_dictionary
+            current_event_id = event.event_id
+        
+        deleted_event_dict = eval(current_event)
+
+        current_event_description = "Event - Title: " + deleted_event_dict["summary"] + "\t\tDescription: " + deleted_event_dict["description"] + "\nStart Time: " + deleted_event_dict["start"]["dateTime"] + "\t\t\tEnd Time: " + deleted_event_dict["end"]["dateTime"] + "\n"
+        confirmation = str(input("Event To-Be-Deleted: \n" + current_event_description + "Are you sure you want this event deleted? (y/n): "))
+        
+        if confirmation == "y":
+
+            service.events().delete(
+                calendarId='primary', 
+                eventId=current_event_id
+            ).execute()
+
+            with app.app_context():
+                # Add to database
+                new_event = Event(
+                event_type = eventType,
+                title = deleted_event_dict.get("summary"), 
+                description = deleted_event_dict.get("description"), 
+                start = deleted_event_dict.get("start").get("dateTime"), 
+                end = deleted_event_dict.get("end").get("dateTime"), 
+
+                # leave the event_id as the the Create event id. This is to keep track of which event you deleted
+                event_id = current_event_id,
+                event_dictionary = current_event
+                )
+                db.session.add(new_event)
+                db.session.commit()
+    
+        elif confirmation == "n":
+            print("\nOk. Please try again with the exact event title that you want removed.")
+            exit(1)
+        else:
+            print("\nYou have inputed an unsupported response. Please try again")
+            exit(1)
+
+        print('\nEvent Deleted! Check your Google Calendar to confirm!\n')
     # User inputted incorrect event type
     else:
 
         print("Please try again with a correct event type (Insert, Update, Remove).")
         exit(1)
 
-#if __name__ == "__main__":
-#  main()
+if __name__ == "__main__":
+ main()
 
 
 
-
-    # remove_format_instruction = None
-
-main()
 
 # Google API
 # event = {
