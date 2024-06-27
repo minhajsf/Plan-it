@@ -152,9 +152,16 @@ calendar has it set as an event type.
 Else, default to Peacock (light blue).
 
 
-# Additional: 
+# Future tweaks + Additional functionality: 
 
-Set recurring meeting
+Recurrence functionality for event creation/updates (ex. every Monday, on weekdays, etc).
 
-For pull (pulling information from calendar) queries, if the specific
-query has been answered before, spit out the existing record.
+Add event selection for Remove functionality in case of duplicate titles.
+
+Add pull functionality for users to check information regarding specific events such as the date and time of an event.
+If a specific pull query has been answered before, spit out the existing record.
+
+Add restorative functionality. Have users able to undo changes to specific events, a la command z.
+
+For update event, have GPT API get the keyword from the user and match it with event titles in the records of the db.
+Have all of the matching records and have the user select which is the correct event they want updated.

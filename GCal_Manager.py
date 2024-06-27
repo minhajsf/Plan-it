@@ -178,11 +178,12 @@ def main():
             )
             db.session.add(new_event)
             db.session.commit()
+        
 
         print(event_description)
         print('Event created! Check your Google Calendar to confirm!\n')
         
-        # print('Event created: %s', insert_event.get('htmlLink'))
+        return insert_event_dict.get("summary")
 
     # Update Event
     elif eventType == "Update": 
@@ -260,6 +261,7 @@ def main():
         print(event_description) 
         print('Event Updated! Check your Google Calendar to confirm!\n')
 
+        return updated_event["summary"]
         # print('Event updated: %s' % updated_event.get('htmlLink'))
 
     # Remove Event
@@ -302,66 +304,21 @@ def main():
                 )
                 db.session.add(new_event)
                 db.session.commit()
-    
+
+            return deleted_event_dict.get("summary")
         elif confirmation == "n":
             print("\nOk. Please try again with the exact event title that you want removed.")
-            exit(1)
+            return None
         else:
             print("\nYou have inputed an unsupported response. Please try again")
-            exit(1)
-
-        print('\nEvent Deleted! Check your Google Calendar to confirm!\n')
+            return None
     # User inputted incorrect event type
     else:
 
         print("Please try again with a correct event type (Insert, Update, Remove).")
         exit(1)
 
+
+
 if __name__ == "__main__":
  main()
-
-
-
-
-# Google API
-# event = {
-#   'summary': 'Google I/O 2015',
-#   'location': '800 Howard St., San Francisco, CA 94103',
-#   'description': 'A chance to hear more about Google\'s developer products.',
-#   'start': {
-#     'dateTime': '2015-05-28T09:00:00-07:00',
-#     'timeZone': 'America/Los_Angeles',
-#   },
-#   'end': {
-#     'dateTime': '2015-05-28T17:00:00-07:00',
-#     'timeZone': 'America/Los_Angeles',
-#   },
-#   'recurrence': [
-#     'RRULE:FREQ=DAILY;COUNT=2'
-#   ],
-#   'attendees': [
-#     {'email': 'lpage@example.com'},
-#     {'email': 'sbrin@example.com'},
-#   ],
-#   'reminders': {
-#     'useDefault': False,
-#     'overrides': [
-#       {'method': 'email', 'minutes': 24 * 60},
-#       {'method': 'popup', 'minutes': 10},
-#     ],
-#   },
-# }
-
-
-# Edit Event
-# # First retrieve the event from the API.
-# event = service.events().get(calendarId='primary', eventId='eventId').execute()
-
-# event['summary'] = 'Appointment at Somewhere'
-
-# updated_event = service.events().update(calendarId='primary', eventId=event['id'], body=event).execute()
-
-# # Print the updated date.
-# print updated_event['updated']
-
-# If modifying these scopes, delete the file token.json.
