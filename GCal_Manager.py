@@ -197,9 +197,6 @@ def main():
     # Update Event
     elif eventType == "Update": 
 
-
-        # print("Implement soon")
-
         # ALTERNATE APPROACH
         # get most important word in the event title from prompt
         # search word in database_entry.title
@@ -223,7 +220,7 @@ def main():
         
         # Update format instruction
         update_format_instruction = f'''
-        For your response, using the given prompt, update the following format with any updated/changed information. Keep the attributes the same if no changes are mentioned/if the change is redundant (same info as current event).
+        For your response, update the following format with any updated/changed information in the give prompt. Keep the attributes the same if no changes are mentioned/if the change is redundant (same info as current event).
         prompt = "{event_update}"
 
         Format of current event:
