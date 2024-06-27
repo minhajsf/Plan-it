@@ -4,21 +4,19 @@ from sqlalchemy import Enum
 db = SQLAlchemy()
 
 
-
 class Event(db.Model):
     """
     Table for Events
     """
     __tablename__ = "event_list"
-    id = db.Column(db.Integer, primary_key = True, autoincrement = True)
-    event_type = db.Column(db.String, nullable = False)
-    title = db.Column(db.String, nullable = False)
-    description = db.Column(db.String, nullable = False)
-    start = db.Column(db.String, nullable = False)
-    end = db.Column(db.String, nullable = False)
-    event_id = db.Column(db.Integer, nullable = False)
-    event_dictionary = db.Column(db.String, nullable = False)
-    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    event_type = db.Column(db.String, nullable=False)
+    title = db.Column(db.String, nullable=False)
+    description = db.Column(db.String, nullable=False)
+    start = db.Column(db.String, nullable=False)
+    end = db.Column(db.String, nullable=False)
+    event_id = db.Column(db.Integer, nullable=False)
+    event_dictionary = db.Column(db.String, nullable=False)
 
     def __init__(self, **kwargs):
         """
@@ -32,14 +30,11 @@ class Event(db.Model):
         self.event_id = kwargs.get("event_id", "")
         self.event_dictionary = kwargs.get("event_dictionary", "")
 
-
-
     def serialize(self):
-        
         """
-        Serializes a Event object.
+        Serializes an Event object.
         """
-        return{
+        return {
             "id": self.id,
             "event_type": self.event_type,
             "title": self.title,
@@ -50,14 +45,11 @@ class Event(db.Model):
             "event_dictionary": self.event_dictionary
         }
 
-
     def incr_serialize(self):
-
         """
-        Incr Serializes a Event object so infinte loop does not occur.
+        Incr Serializes an Event object so an infinite loop does not occur.
         """
-
-        return{
+        return {
             "id": self.id,
             "event_type": self.event_type,
             "title": self.title,
