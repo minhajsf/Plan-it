@@ -121,7 +121,10 @@ def main():
         For your response input the following prompt information
         in the exact format below. Make sure to start your response
         at the first left curly brace of the event dictionary.
-        Understand that the current time is currently
+        Understand that the current time is currently.
+        Don't change anything about any attributes that the user
+        does not give a specification to (including case of 
+        characters). PLEASE LEAVE True as True not lowercase true.
         {current_datetime}:
 
         {prompt}
@@ -220,6 +223,9 @@ def main():
         updated/changed information in the give prompt. Keep the
         attributes the same if no changes are mentioned/if the change
         is redundant (same info as current event).
+        Don't change anything about any attributes that the user
+        does not give a specification to (including case of 
+        characters). PLEASE LEAVE True as True not lowercase true.
         prompt = "{event_update}"
 
         Format of current event:

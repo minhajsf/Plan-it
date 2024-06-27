@@ -5,15 +5,15 @@ jobs:
   check-style:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: 3.11.3
 
       - name: Install tools
-        run: python -m pip3 install --upgrade pip pycodestyle
+        run: python -m pip3 install --upgrade pip3 pycodestyle
 
       - name: Check Style
         run: pycodestyle --first *.py
