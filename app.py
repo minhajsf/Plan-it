@@ -5,19 +5,9 @@ import logging
 from dotenv import load_dotenv
 from openai import OpenAI
 from db import db
-from db import Event
+from db import Event, User
 from flask import Flask, jsonify
 from flask import request
-
-
-# USE COMMAND pip install -r requirements.txt the first time around
-# then pip3 freeze > requirements
-
-# After installing a new import, just do pip3 freeze > requirements.txt
-# to automate the installation of the imports
-
-
-# Google Imports
 import datetime
 from datetime import datetime
 from tzlocal import get_localzone
