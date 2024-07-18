@@ -370,20 +370,32 @@ def index():
     return render_template('ioExample.html')
 
 
-def determine_query_type(message):
-    # this can be modified so that we only make on instance per session itf
-    client = OpenAI(api_key=OPENAI_API_KEY)
-    completion = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": "Determine if the following message is related to either mail, meetings, or a "
-                                        "calendar event. Once you have determined that, return a response of the form"
-                                        "{'response': 'example response'} where example response is mail, meeting, or "
-                                        "calendar."}
-        ]
-    )
-    response = completion.choices[0].message.content
+def determine_query_type(message: str):
+    try:
+        # Ideally we remove the creation part and make it global itf
+        client = OpenAI(api_key=OPENAI_API_KEY)
+        # Make API request
+        completion = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system",
+                 "content": "You are an assistant that determines if a message is related to either mail, "
+                            "google meeting or a calendar event. Then, return a json response as {'event_type': '', "
+                            "mode:''} where type is calendar, meeting, or mail and mode is create, delete, or update"},
+                {"role": "user", "content": f"The message is the following: {message}"}
+            ]
+        )
+
+        # Extract and parse the response
+        response = json.loads(completion.choices[0].message.content)
+        print(type(response))
+        print(response)
+        return response # response is json object with keys event_type and mode
+    except Exception as e:
+        print(f"Error processing message: {e}")
+        return {"event_type": "unknown", "mode": "unknown"}
+
 
 
 @socketio.on('connect')
