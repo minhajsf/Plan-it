@@ -1,7 +1,7 @@
 import os
 import openai
 import json
-from flask import Flask, jsonify, render_template, url_for, flash, redirect, request, session
+from flask import Flask, jsonify, render_template, url_for, flash, redirect, request, session, g
 from flask_behind_proxy import FlaskBehindProxy
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -85,7 +85,7 @@ def gcal():
     my_api_key = os.getenv('OPENAI_API_KEY')
 
     # Create an OpenAPI client using the API key
-    client = OpenAI(
+    g.client = OpenAI(
         api_key=my_api_key,
     )
 
@@ -108,7 +108,7 @@ def gcal():
         with open("token.json", "w") as token:
             token.write(creds.to_json())
     try:
-        service = build("calendar", "v3", credentials=creds)
+        g.service = build("calendar", "v3", credentials=creds)
     except Exception:
         # Name of the file to be deleted
         filename = "token.json"
@@ -134,15 +134,6 @@ def gcal():
         print("""Please try again with a correct event type (Insert, Update, 
               Remove).""")
         exit(1)
-
-        prompt = str(request.args.get('prompt'))
-
-        # PROMPT
-        # get localhost time zone
-        timeZone = get_localzone()
-
-        # Get current dateTime in ISO 8601
-        current_datetime = datetime.now()
 
 
 # Create a calendar event
@@ -444,5 +435,6 @@ def gmail_send():
 
 
 
+# Main function
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=8000, debug=True)
