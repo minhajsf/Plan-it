@@ -9,7 +9,7 @@ import logging
 import socketio
 from dotenv import load_dotenv
 from openai import OpenAI
-from db import db, Event, User
+from db import db, Users, Events, Meets, Emails
 
 
 # Google Imports
@@ -23,6 +23,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from google.apps import meet_v2
 
 
 # Flask App setup
@@ -39,13 +40,14 @@ def get_events():
     """
     Endpoint for getting all events.
     """
-    events = [event.serialize() for event in Event.query.all()]
+    events = [event.serialize() for event in Events.query.all()]
     return json.dumps({"events": events})
 
 
-SCOPES = ['https://www.googleapis.com/auth/calendar',
+GCAL_SCOPES = ['https://www.googleapis.com/auth/calendar',
           'https://www.googleapis.com/auth/calendar.events']
 
+GMEET_SCOPES = ['https://www.googleapis.com/auth/meetings.space.created']
 
 @app.route('/')
 def index():
@@ -53,7 +55,7 @@ def index():
 
 
 def determine_query_type(message):
-    # this can be modified so that we only make on instance per session itf
+    # this can be modified so that we only make one instance per session itf
     client = OpenAI(api_key=OPENAI_API_KEY)
     completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -61,7 +63,7 @@ def determine_query_type(message):
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": "Determine if the following message is related to either mail, meetings, or a "
                                         "calendar event. Once you have determined that, return a response of the form"
-                                        "{'response': 'example response'} where example response is mail, meeting, or "
+                                        "{'response': 'example response'} where example response is, meeting, or "
                                         "calendar."}
         ]
     )
@@ -104,7 +106,7 @@ def gcal():
     """
 
     # CALENDAR DATABASE SETUP
-    db_filename = "calendar.db"
+    db_filename = "events.db"
 
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///%s" % db_filename
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -113,8 +115,8 @@ def gcal():
     app.config["SQLALCHEMY_ECHO"] = False
 
     db.init_app(app)
-    with app.app_context():
-        db.create_all()
+    
+    db.create_all()
 
     # CHATGPT API
     # Get OPENAI_API_KEY from environment variables
@@ -132,13 +134,13 @@ def gcal():
     # created automatically when the authorization flow completes for the first
     # time.
     if os.path.exists("token.json"):
-        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+        creds = Credentials.from_authorized_user_file("token.json", GCAL_SCOPES)
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
-                "credentials.json", SCOPES
+                "credentials.json", GCAL_SCOPES
             )
             # Specify a fixed port here
             creds = flow.run_local_server(port=8080)
@@ -250,21 +252,20 @@ def gcal_create():
     # Get event id
     insert_event_id = insert_event['id']
     # Add to database
-    with app.app_context():
-        # Add to database
-        new_event = Event(
-            # user_id
-            user_id=1,
-            event_type="Create",
-            title=insert_event_dict.get("summary"),
-            description=insert_event_dict.get("description"),
-            start=insert_event_dict.get("start").get("dateTime"),
-            end=insert_event_dict.get("end").get("dateTime"),
-            event_id=insert_event_id,
-            event_dictionary=response
-            )
-        db.session.add(new_event)
-        db.session.commit()
+    # Add to database
+    new_event = Events(
+        # user_id
+        user_id=1,
+        event_type="Create",
+        title=insert_event_dict.get("summary"),
+        description=insert_event_dict.get("description"),
+        start=insert_event_dict.get("start").get("dateTime"),
+        end=insert_event_dict.get("end").get("dateTime"),
+        event_id=insert_event_id,
+        event_dictionary=response
+        )
+    db.session.add(new_event)
+    db.session.commit()
 
     print(event_description)
     print('Event created! Check your Google Calendar to confirm!\n')
@@ -283,7 +284,7 @@ def gcal_update():
     event_update = str(input('''What would you like to change
                                 about the event?: '''))
 
-    event = Event.query.filter_by(title=event_title).first()
+    event = Events.query.filter_by(title=event_title).first()
     current_event = event.event_dictionary
     current_event_id = event.event_id
 
@@ -339,23 +340,22 @@ def gcal_update():
     # Get the event id
     updated_event_id = updated_event['id']
     # Add to database
-    with app.app_context():
-        # Add to database
-        new_event = Event(
-            user_id=1,
-            event_type="Update",
-            title=updated_event_dict.get("summary"),
-            description=updated_event_dict.get("description"),
-            start=updated_event_dict.get("start").get("dateTime"),
-            end=updated_event_dict.get("end").get("dateTime"),
+    # Add to database
+    new_event = Events(
+        user_id=1,
+        event_type="Update",
+        title=updated_event_dict.get("summary"),
+        description=updated_event_dict.get("description"),
+        start=updated_event_dict.get("start").get("dateTime"),
+        end=updated_event_dict.get("end").get("dateTime"),
 
-            # leave the event_id as the the Create event id.
-            # This is to keep track of which event you updated
-            event_id=current_event_id,
-            event_dictionary=response
-        )
-        db.session.add(new_event)
-        db.session.commit()
+        # leave the event_id as the the Create event id.
+        # This is to keep track of which event you updated
+        event_id=current_event_id,
+        event_dictionary=response
+    )
+    db.session.add(new_event)
+    db.session.commit()
 
     print(event_description)
     print('Event Updated! Check your Google Calendar to confirm!\n')
@@ -372,10 +372,9 @@ def gcal_remove():
                             to remove? (Exact title): '''))
 
     # perform a query on the database for the title
-    with app.app_context():
-        event = Event.query.filter_by(title=event_title).first()
-        current_event = event.event_dictionary
-        current_event_id = event.event_id
+    event = Events.query.filter_by(title=event_title).first()
+    current_event = event.event_dictionary
+    current_event_id = event.event_id
 
     deleted_event_dict = eval(current_event)
 
@@ -397,23 +396,22 @@ def gcal_remove():
             eventId=current_event_id
         ).execute()
 
-        with app.app_context():
-            # Add to database
-            new_event = Event(
-                user_id=1,
-                event_type="Remove",
-                title=deleted_event_dict.get("summary"),
-                description=deleted_event_dict.get("description"),
-                start=deleted_event_dict.get("start").get("dateTime"),
-                end=deleted_event_dict.get("end").get("dateTime"),
+        # Add to database
+        new_event = Events(
+            user_id=1,
+            event_type="Remove",
+            title=deleted_event_dict.get("summary"),
+            description=deleted_event_dict.get("description"),
+            start=deleted_event_dict.get("start").get("dateTime"),
+            end=deleted_event_dict.get("end").get("dateTime"),
 
-                # leave the event_id as the the Create event id.
-                # This is to keep track of which event you deleted
-                event_id=current_event_id,
-                event_dictionary=current_event
-            )
-            db.session.add(new_event)
-            db.session.commit()
+            # leave the event_id as the the Create event id.
+            # This is to keep track of which event you deleted
+            event_id=current_event_id,
+            event_dictionary=current_event
+        )
+        db.session.add(new_event)
+        db.session.commit()
 
         return deleted_event_dict.get("summary")
     
@@ -438,10 +436,57 @@ def gmeet():
     """
     Endpoint for Google Meet.
     """
+
+    # MEETS DATABASE SETUP
+    db_filename = "meets.db"
+
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///%s" % db_filename
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+    # Print SQLAlchemy INFO logs (True) Silence SQLAlchemy INFO logs (False)
+    app.config["SQLALCHEMY_ECHO"] = False
+
+    db.init_app(app)
+    
+    db.create_all()
+
+    creds = None
+    # The file token.json stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', GMEET_SCOPES)
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                'credentials.json', GMEET_SCOPES)
+            creds = flow.run_local_server(port=0)
+        # Save the credentials for the next run
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
+
+    try:
+        client = meet_v2.SpacesServiceClient(credentials=creds)
+        request = meet_v2.CreateSpaceRequest()
+        response = client.create_space(request=request)
+        print(f'Space created: {response.meeting_uri}')
+    except Exception as error:
+        # TODO(developer) - Handle errors from Meet API.
+        print(f'An error occurred: {error}')
+
     return "Google Meet"
 
 @app.route('/gmeet_create', methods=['GET'])
 def gmeet_create():
+    """
+    new_meet = Meets(
+        user_id=1,
+        event_type="Create",
+
+    """
     return "Google Meet Create"
 @app.route('/gmeet_update', methods=['GET'])
 def gmeet_update():
@@ -462,6 +507,20 @@ def gmail():
     """
     Endpoint for Gmail.
     """
+
+    # EMAILS DATABASE SETUP
+    db_filename = "emails.db"
+
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///%s" % db_filename
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+    # Print SQLAlchemy INFO logs (True) Silence SQLAlchemy INFO logs (False)
+    app.config["SQLALCHEMY_ECHO"] = False
+
+    db.init_app(app)
+    
+    db.create_all()
+
     return "Gmail"
 
 # Creates a draft (not message to allow for updating before sending)
