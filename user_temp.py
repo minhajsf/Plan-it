@@ -36,9 +36,13 @@ proxied = FlaskBehindProxy(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+db.init_app(app)
+with app.app_context():
+    db.create_all()
 
 @app.route('/')
 def root():
+    ##return render_template('voice.html', title='Record')
     return redirect(url_for('login'))
 
 
@@ -89,3 +93,6 @@ def login_required(f):
         return f(*args, **kwargs)
 
     return decorated_function
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000, debug=True, ssl_context='adhoc')
