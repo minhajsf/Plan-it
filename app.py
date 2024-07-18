@@ -6,9 +6,8 @@ import socketio
 from dotenv import load_dotenv
 from openai import OpenAI
 from db import db
-from db import Event
-from flask import Flask, jsonify, request, render_template, session
 from flask_socketio import SocketIO, emit, join_room, leave_room
+from flask import Flask, jsonify, render_template, session, request
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -24,6 +23,7 @@ print('OPENAI_API_KEY: ', OPENAI_API_KEY)
 
 
 # Google Imports
+from db import Event, User
 import datetime
 from datetime import datetime
 from tzlocal import get_localzone
