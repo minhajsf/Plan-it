@@ -1,23 +1,15 @@
 import os
-import openai
 import json
-from flask import Flask, jsonify, render_template, url_for, flash, redirect, request, session, g
+from flask import Flask, jsonify, render_template, url_for, flash, redirect, request, session, g, request
+from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_behind_proxy import FlaskBehindProxy
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import logging
+import socketio
 from dotenv import load_dotenv
 from openai import OpenAI
-from db import db
-from db import Event
-from flask import request
-
-
-# USE COMMAND pip install -r requirements.txt the first time around
-# then pip3 freeze > requirements
-
-# After installing a new import, just do pip3 freeze > requirements.txt
-# to automate the installation of the imports
+from db import db, Event, User
 
 
 # Google Imports
@@ -35,6 +27,9 @@ from googleapiclient.errors import HttpError
 
 # Flask App setup
 app = Flask(__name__)
+socketio = SocketIO(app)
+load_dotenv()
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 proxied = FlaskBehindProxy(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
 
@@ -50,6 +45,48 @@ def get_events():
 
 SCOPES = ['https://www.googleapis.com/auth/calendar',
           'https://www.googleapis.com/auth/calendar.events']
+
+
+@app.route('/')
+def index():
+    return render_template('ioExample.html')
+
+
+def determine_query_type(message):
+    # this can be modified so that we only make on instance per session itf
+    client = OpenAI(api_key=OPENAI_API_KEY)
+    completion = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "Determine if the following message is related to either mail, meetings, or a "
+                                        "calendar event. Once you have determined that, return a response of the form"
+                                        "{'response': 'example response'} where example response is mail, meeting, or "
+                                        "calendar."}
+        ]
+    )
+    response = completion.choices[0].message.content
+
+
+@socketio.on('connect')
+def handle_new_connection():
+    print('Client connected.')
+    session['socket_id'] = request.sid
+    join_room(session['socket_id'])
+    emit('status', {'msg': 'Connected to server'})
+
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print('Client disconnected')
+    leave_room(session['socket_id'])  # Leave room when client disconnects
+    session.clear()
+
+
+@socketio.on('user_message')
+def handle_user_message(message):
+    print(f'Received message: {message}')
+    emit('server_response', f'Server received: {message}', room=request.sid)
 
 
 
@@ -193,7 +230,7 @@ def gcal_create():
     response = completion.choices[0].message.content
 
     response = response[response.index("{"):
-                        len(response)-response[::-1].index("}")]
+                        len(response) - response[::-1].index("}")]
     # print(response)
 
     # Converts response string to a dictionary
@@ -280,7 +317,7 @@ def gcal_update():
     response = completion.choices[0].message.content
 
     response = response[response.index("{"):
-                        len(response)-response[::-1].index("}")]
+                        len(response) - response[::-1].index("}")]
     # print(response)
 
     # Converts response string to a dictionary
@@ -440,6 +477,6 @@ def gmail_update():
 def gmail_send():
     return "Gmail Send"
 
-# Main function
-if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=8000, debug=True)
+
+if __name__ == "__main__":
+    socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
