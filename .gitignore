@@ -1,6 +1,9 @@
 .env
 credentials.json
 token.json
+.ven
+venv
+.idea
 venv
 __pycache__/
 instance/
