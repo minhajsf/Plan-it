@@ -395,7 +395,6 @@ def gcal_remove():
         return None
 
 
-
 #
 # -----------------------------------------------------------------------
 # GCAL ROUTES
@@ -416,6 +415,33 @@ def gmeet_create():
 def gmeet_update():
 
 @app.route('/gmeet_remove', methods=['GET'])
+
+
+#
+# -----------------------------------------------------------------------
+# GCAL ROUTES
+# -----------------------------------------------------------------------
+#
+
+@app.route('/gmail', methods=['GET'])
+def gmail():
+    """
+    Endpoint for Gmail.
+    """
+    return "Gmail"
+
+# Creates a draft (not message to allow for updating before sending)
+@app.route('/gmail_create', methods=['GET'])
+def gmail_create():
+
+# Updates a draft
+@app.route('/gmail_update', methods=['GET'])
+def gmail_update():
+
+# Sends a draft
+@app.route('/gmail_send', methods=['GET'])
+def gmail_send():
+
 
 
 if __name__ == '__main__':
