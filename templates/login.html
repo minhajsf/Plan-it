@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Page</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <script src="../static/js/flash.js"></script>
+</head>
+<body>
+{% block content %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <div id="login-form" class="form-section">
+            <h1>Flick Found</h1>
+            <form method="POST" class="mb-3">
+                {{ form.hidden_tag() }}
+                <div class="form-group">
+                    <p>Email:</p>
+                    <div class = "label">
+                        {% if form.email.errors %}
+                          {{ form.email(class="form-control form-control-lg is-invalid") }}
+                           <div class=“invalid-feedback”>
+                            {% for error in form.email.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        {{ form.email(class="form-control form-control-lg") }}
+                    {% endif %}
+                    </div>
+                </div>
+                <div class="form-group">
+                    <p>Password:</p>
+                    <div class = "label">
+                            {% if form.password.errors %}
+                                {{ form.password(class="form-control form-control-lg is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.password.errors%}
+                                        <span>{{error}}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.password(class="form-control form-control-lg") }}
+                            {% endif %}
+                    </div>
+                </div>
+                <div class="button-container">
+                    <a href="{{ url_for('register') }}" class="btn btn-secondary" id = "show-register">No Account? Create One here</a>
+                    {{ form.submit(class="btn-btn-primary") }}
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+{% endblock %}
+
+</body>
+</html>
