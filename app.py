@@ -181,7 +181,7 @@ def gcal_create():
     """
     # Send ChatGPT the user's prompt and store the
     # response (event dictionary)
-    completion = client.chat.completions.create(
+    completion = getattr(g,'client').chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
@@ -206,7 +206,7 @@ def gcal_create():
     \t\t\tEnd Time: {insert_event_dict["end"]["dateTime"]}\n'''
 
     # Creates new event in calendar
-    insert_event = service.events().insert(
+    insert_event = getattr(g, 'service').events().insert(
         calendarId='primary',
         body=insert_event_dict).execute()
 
@@ -216,6 +216,8 @@ def gcal_create():
     with app.app_context():
         # Add to database
         new_event = Event(
+            # user_id
+            user_id=1,
             event_type="Create",
             title=insert_event_dict.get("summary"),
             description=insert_event_dict.get("description"),
@@ -265,7 +267,7 @@ def gcal_update():
 
     '''
 
-    completion = client.chat.completions.create(
+    completion = getattr(g, 'client').chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": """You are a helpful assistant.
@@ -291,7 +293,7 @@ def gcal_update():
     \t\t\tEnd Time: {updated_event_dict["end"]["dateTime"]}\n"""
 
     # # Update the event
-    updated_event = service.events().update(
+    updated_event = getattr(g, 'service').events().update(
         calendarId='primary',
         eventId=current_event_id,
         body=updated_event_dict
@@ -303,6 +305,7 @@ def gcal_update():
     with app.app_context():
         # Add to database
         new_event = Event(
+            user_id=1,
             event_type="Update",
             title=updated_event_dict.get("summary"),
             description=updated_event_dict.get("description"),
@@ -352,7 +355,7 @@ def gcal_remove():
 
     if confirmation == "y":
 
-        service.events().delete(
+        getattr(g, 'service').events().delete(
             calendarId='primary',
             eventId=current_event_id
         ).execute()
@@ -360,6 +363,7 @@ def gcal_remove():
         with app.app_context():
             # Add to database
             new_event = Event(
+                user_id=1,
                 event_type="Remove",
                 title=deleted_event_dict.get("summary"),
                 description=deleted_event_dict.get("description"),
@@ -401,11 +405,13 @@ def gmeet():
 
 @app.route('/gmeet_create', methods=['GET'])
 def gmeet_create():
-
+    return "Google Meet Create"
 @app.route('/gmeet_update', methods=['GET'])
 def gmeet_update():
-
+    return "Google Meet Update"
 @app.route('/gmeet_remove', methods=['GET'])
+def gmeet_remove():
+    return "Google Meet Remove"
 
 
 #
@@ -424,16 +430,15 @@ def gmail():
 # Creates a draft (not message to allow for updating before sending)
 @app.route('/gmail_create', methods=['GET'])
 def gmail_create():
-
+    return "Gmail Create"
 # Updates a draft
 @app.route('/gmail_update', methods=['GET'])
 def gmail_update():
-
+    return "Gmail Update"
 # Sends a draft
 @app.route('/gmail_send', methods=['GET'])
 def gmail_send():
-
-
+    return "Gmail Send"
 
 # Main function
 if __name__ == '__main__':
