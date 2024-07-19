@@ -73,7 +73,7 @@ def determine_query_type(prompt):
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": f"""Determine if the following message is related to either Gmail, Google Meet, or a 
-                                        Google Calendar event. Once you have determined that, return 'gcal', 'gmeet', "
+                                        Google Calendar event. Once you have determined that, only respond with 'gcal', 'gmeet', "
                                         or 'gmail' in that exact spelling and in lowercase: {prompt}"""}
         ]
     )
@@ -86,7 +86,7 @@ def handle_user_prompt(prompt):
     g.user_prompt = prompt
     prompt_type = determine_query_type(prompt)
     print("Prompt type (1st GPT Call): " + prompt_type, file=sys.stderr)
-    redirect(url_for(prompt_type))
+    return redirect(url_for(prompt_type))
     # emit('server_response', f'Server received: {message}', room=request.sid)
 
 
@@ -164,11 +164,11 @@ def gcal():
 
     # Create Event
     if eventType == "Create" or eventType == "create":
-        redirect(url_for('gcal_create'))
+        return redirect(url_for('gcal_create'))
     elif eventType == "Update" or eventType == "update":
-        redirect(url_for('gcal_update'))
+        return redirect(url_for('gcal_update'))
     elif eventType == "Remove" or eventType == "remove":
-        redirect(url_for('gcal_remove'))
+        return redirect(url_for('gcal_remove'))
     else:
         print("""Please try again with a correct event type (Insert, Update, 
               Remove).""")
