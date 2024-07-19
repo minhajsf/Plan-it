@@ -13,7 +13,6 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from db import db, Users, Events, Meets, Emails
 
-
 # Google Imports
 import datetime
 from datetime import datetime
@@ -26,7 +25,6 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google.apps import meet_v2
-
 
 # Flask App setup
 app = Flask(__name__)
@@ -55,9 +53,10 @@ client = OpenAI(
 )
 
 GCAL_SCOPES = ['https://www.googleapis.com/auth/calendar',
-          'https://www.googleapis.com/auth/calendar.events']
+               'https://www.googleapis.com/auth/calendar.events']
 
 GMEET_SCOPES = ['https://www.googleapis.com/auth/meetings.space.created']
+
 
 @app.route('/')
 def index():
@@ -111,7 +110,6 @@ def determine_query_type(message: str):
 
 @socketio.on('user_prompt')
 def handle_user_prompt(prompt):
-
     print("User prompt recieved: " + prompt, file=sys.stderr)
 
     # add in prompt to dictionary directly
@@ -141,27 +139,23 @@ def handle_user_prompt(prompt):
             print("Please try again. The program only works for Create, Update, and Remove.", file=sys.stderr)
             exit(1)
     elif prompt_dictionary['event_type'].lower() == "gmeet":
-        gmeet()
-        if prompt_dictionary['mode'].lower() == "create":
-            gcal_create()
-        elif prompt_dictionary['mode'].lower() == "update":
-            gcal_update()
-        elif prompt_dictionary['mode'].lower() == "remove":
-            gcal_remove()
-        else:
+        gmeet_setup()
+        if prompt_dictionary['mode'].lower() == "remove":
+            gmeet_remove()
+        elif prompt_dictionary['mode'].lower() == "unknown":
             print("Please try again. The program only works for Create, Update, and Remove.", file=sys.stderr)
             exit(1)
+        else:
+            gmeet_create_or_update()
     elif prompt_dictionary['event_type'].lower() == "gmail":
         # gmail()
         return 1
     else:
         print("Please try again. The program only works for Google Calendar, Google Meet, and Gmail.", file=sys.stderr)
         exit(1)
-
     #with app.app_context():
     #    return redirect(url_for(prompt_type))
     # emit('server_response', f'Server received: {message}', room=request.sid)
-
 
 
 #
@@ -171,17 +165,11 @@ def handle_user_prompt(prompt):
 #
 
 def gcal():
-
     """
     Endpoint for Google Calendar.
     """
     print("'gcal' route hit", file=sys.stderr)
-
-    # GOOGLE CALENDAR API
     creds = None
-    # The file token.json stores the user's access and refresh tokens, and is
-    # created automatically when the authorization flow completes for the first
-    # time.
     if os.path.exists("token.json"):
         creds = Credentials.from_authorized_user_file("token.json", GCAL_SCOPES)
     if not creds or not creds.valid:
@@ -220,7 +208,6 @@ def gcal():
     # eventType = completion.choices[0].message.content
     # print("Event Type (2nd GPT Call): " + eventType, file=sys.stderr)
 
-
     # Create Event
     # if eventType == "Create" or eventType == "create":
     #     return redirect(url_for('gcal_create'))
@@ -236,7 +223,6 @@ def gcal():
 
 # Create a calendar event
 def gcal_create():
-
     print("'gcal_create' route hit", file=sys.stderr)
 
     prompt = session['prompt_dictionary']['prompt']
@@ -278,7 +264,7 @@ def gcal_create():
     # response (event dictionary)
     completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
-        response_format={"type": "json_object"}, # response is ALWAYS json, include json in prompt to work
+        response_format={"type": "json_object"},  # response is ALWAYS json, include json in prompt to work
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": insert_format_instruction}
@@ -292,7 +278,7 @@ def gcal_create():
                         len(response) - response[::-1].index("}")]
     print("Response Dict (3rd GPT Call): " + response, file=sys.stderr)
 
-    response = re.sub(r"\btrue\b", "True", response) # GPT API inconsistent with capitalization w True
+    response = re.sub(r"\btrue\b", "True", response)  # GPT API inconsistent with capitalization w True
 
     # Converts response string to a dictionary
     insert_event_dict = eval(response)
@@ -322,7 +308,7 @@ def gcal_create():
         end=insert_event_dict.get("end").get("dateTime"),
         event_id=insert_event_id,
         event_dictionary=response
-        )
+    )
     db.session.add(new_event)
     db.session.commit()
 
@@ -473,14 +459,14 @@ def gcal_remove():
         db.session.commit()
 
         return deleted_event_dict.get("summary")
-    
+
     elif confirmation == "n":
         print("""\nOk. Please try again with the exact event title that you
                 want removed.""")
         return None
     else:
         print("\nYou have inputed an unsupported response. Please try" +
-                "again")
+              "again")
         return None
 
 
@@ -490,67 +476,63 @@ def gcal_remove():
 # -----------------------------------------------------------------------
 #
 
+
+def get_event_id(service, calendar_id='primary', max_results=10, event_summary=None):
+    """
+    Retrieves the event ID for a specific event based on the summary.
+
+    :param service: The Google Calendar API service instance.
+    :param calendar_id: The ID of the calendar to retrieve events from.
+    :param max_results: The maximum number of events to retrieve.
+    :param event_summary: The summary of the event to find.
+    :return: The event ID of the matching event, or None if not found.
+    """
+    events = list_events(service, calendar_id, max_results)
+
+    for event in events:
+        if event_summary and event['summary'] == event_summary:
+            return event['id']
+
+    return None
+
+
+def list_events(service, calendar_id='primary', max_results=10):
+    events_result = service.events().list(
+        calendarId=calendar_id,
+        maxResults=max_results,
+        singleEvents=True,
+        orderBy='startTime'
+    ).execute()
+    events = events_result.get('items', [])
+    return events
+
+
+
 @app.route('/gmeet', methods=['GET'])
-def gmeet():
-    """
-    Endpoint for Google Meet.
-    """
+def gmeet_setup():
+    def get_google_service():
+        creds = None
+        if os.path.exists("token.json"):
+            creds = Credentials.from_authorized_user_file("token.json", GCAL_SCOPES)
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            else:
+                flow = InstalledAppFlow.from_client_secrets_file(
+                    "credentials.json", GCAL_SCOPES
+                )
+                creds = flow.run_local_server(port=8080)
+            with open("token.json", "w") as token:
+                token.write(creds.to_json())
+        return build("calendar", "v3", credentials=creds)
 
-    # MEETS DATABASE SETUP
-    db_filename = "meets.db"
+    g.service = get_google_service() # global used throughout the gmeet section
 
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///%s" % db_filename
-    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-    # Print SQLAlchemy INFO logs (True) Silence SQLAlchemy INFO logs (False)
-    app.config["SQLALCHEMY_ECHO"] = False
+def gmeet_create_or_update():
+    return "Google Meet create or update"
 
-    db.init_app(app)
-    
-    db.create_all()
 
-    creds = None
-    # The file token.json stores the user's access and refresh tokens, and is
-    # created automatically when the authorization flow completes for the first
-    # time.
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', GMEET_SCOPES)
-    # If there are no (valid) credentials available, let the user log in.
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', GMEET_SCOPES)
-            creds = flow.run_local_server(port=0)
-        # Save the credentials for the next run
-        with open('token.json', 'w') as token:
-            token.write(creds.to_json())
-
-    try:
-        client = meet_v2.SpacesServiceClient(credentials=creds)
-        request = meet_v2.CreateSpaceRequest()
-        response = client.create_space(request=request)
-        print(f'Space created: {response.meeting_uri}')
-    except Exception as error:
-        # TODO(developer) - Handle errors from Meet API.
-        print(f'An error occurred: {error}')
-
-    return "Google Meet"
-
-@app.route('/gmeet_create', methods=['GET'])
-def gmeet_create():
-    """
-    new_meet = Meets(
-        user_id=1,
-        event_type="Create",
-
-    """
-    return "Google Meet Create"
-@app.route('/gmeet_update', methods=['GET'])
-def gmeet_update():
-    return "Google Meet Update"
-@app.route('/gmeet_remove', methods=['GET'])
 def gmeet_remove():
     return "Google Meet Remove"
 
@@ -577,19 +559,24 @@ def gmail():
     app.config["SQLALCHEMY_ECHO"] = False
 
     db.init_app(app)
-    
+
     db.create_all()
 
     return "Gmail"
+
 
 # Creates a draft (not message to allow for updating before sending)
 @app.route('/gmail_create', methods=['GET'])
 def gmail_create():
     return "Gmail Create"
+
+
 # Updates a draft
 @app.route('/gmail_update', methods=['GET'])
 def gmail_update():
     return "Gmail Update"
+
+
 # Sends a draft
 @app.route('/gmail_send', methods=['GET'])
 def gmail_send():

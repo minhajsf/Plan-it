@@ -9,7 +9,7 @@ from google.apps import meet_v2
 
 
 # If modifying these scopes, delete the file token.json.
-SCOPES = ['https://www.googleapis.com/auth/meetings.space.created']
+GMEET_SCOPES = ['https://www.googleapis.com/auth/meetings.space.created']
 
 
 def main():
@@ -20,15 +20,15 @@ def main():
     # created automatically when the authorization flow completes for the first
     # time.
     if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+        creds = Credentials.from_authorized_user_file('token.json', GMEET_SCOPES)
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0)
+                'credentials.json', GMEET_SCOPES)
+            creds = flow.run_local_server(port=8080)
         # Save the credentials for the next run
         with open('token.json', 'w') as token:
             token.write(creds.to_json())
@@ -41,6 +41,8 @@ def main():
     except Exception as error:
         # TODO(developer) - Handle errors from Meet API.
         print(f'An error occurred: {error}')
+
+    return "Google Meet"
 
 
 if __name__ == '__main__':
