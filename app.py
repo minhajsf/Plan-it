@@ -34,15 +34,10 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 proxied = FlaskBehindProxy(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
 
-
-# Get all <gcal/gmeet/gmail> database events
-def get_events():
-    """
-    Endpoint for getting all events.
-    """
-    events = [event.serialize() for event in Events.query.all()]
-    return json.dumps({"events": events})
-
+# ChatGPT API Setup
+client = OpenAI(
+    api_key=OPENAI_API_KEY,
+)
 
 GCAL_SCOPES = ['https://www.googleapis.com/auth/calendar',
           'https://www.googleapis.com/auth/calendar.events']
@@ -51,23 +46,7 @@ GMEET_SCOPES = ['https://www.googleapis.com/auth/meetings.space.created']
 
 @app.route('/')
 def index():
-    return render_template('ioExample.html')
-
-
-def determine_query_type(message):
-    # this can be modified so that we only make one instance per session itf
-    client = OpenAI(api_key=OPENAI_API_KEY)
-    completion = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": "Determine if the following message is related to either mail, meetings, or a "
-                                        "calendar event. Once you have determined that, return a response of the form"
-                                        "{'response': 'example response'} where example response is, meeting, or "
-                                        "calendar."}
-        ]
-    )
-    response = completion.choices[0].message.content
+    return render_template('home.html')
 
 
 @socketio.on('connect')
@@ -85,10 +64,25 @@ def handle_disconnect():
     session.clear()
 
 
-@socketio.on('user_message')
-def handle_user_message(message):
-    print(f'Received message: {message}')
-    emit('server_response', f'Server received: {message}', room=request.sid)
+def determine_query_type(message):
+    # this can be modified so that we only make one instance per session itf
+    completion = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "Determine if the following message is related to either Gmail, Google Meet, or a "
+                                        "Google Calendar event. Once you have determined that, return 'gcal', 'gmeet', "
+                                        "or 'gmail' in that exact spelling and in lowercase."}
+        ]
+    )
+    response = completion.choices[0].message.content
+    return response
+
+@socketio.on('user_prompt')
+def handle_user_prompt(prompt):
+    prompt_type = determine_query_type(prompt)
+    redirect(url_for(prompt_type))
+    # emit('server_response', f'Server received: {message}', room=request.sid)
 
 
 
@@ -117,16 +111,6 @@ def gcal():
     db.init_app(app)
     
     db.create_all()
-
-    # CHATGPT API
-    # Get OPENAI_API_KEY from environment variables
-    load_dotenv()
-    my_api_key = os.getenv('OPENAI_API_KEY')
-
-    # Create an OpenAPI client using the API key
-    g.client = OpenAI(
-        api_key=my_api_key,
-    )
 
     # GOOGLE CALENDAR API
     creds = None
@@ -178,6 +162,7 @@ def gcal():
 # Create a calendar event
 @app.route('/gcal_create', methods=['POST'])
 def gcal_create():
+
     prompt = str(input(f"\nYou are going to Create an Event!" +
                            " Enter your prompt here: \n"))
 
@@ -220,7 +205,7 @@ def gcal_create():
     """
     # Send ChatGPT the user's prompt and store the
     # response (event dictionary)
-    completion = getattr(g,'client').chat.completions.create(
+    completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
@@ -305,7 +290,7 @@ def gcal_update():
 
     '''
 
-    completion = getattr(g, 'client').chat.completions.create(
+    completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": """You are a helpful assistant.
