@@ -3,6 +3,7 @@ html {
     margin: 0;
     padding: 0;
     min-height: 100vh;
+    color: white;
 }
 
 body {
@@ -20,12 +21,17 @@ h1 {
     background: transparent;
     border: none;
     border-radius: 0;
-    color: black;
+    color: white;
 }
 .form-control:focus {
     background: transparent;
     box-shadow: none;
     transition: all 0.5s;
+    color: white;
+}
+.form-control::placeholder {
+    color: white;
+    opacity: 0.7;
 }
 img {
     width: 40px;
@@ -35,12 +41,12 @@ img {
     display: flex;
     align-items: center;
     width: 100%;
-    border-bottom: 1px solid black;
+    border-bottom: 2px solid black;
     padding-bottom: 5px;
     margin: 30px 0 40px 0;
 }
 .label:has(.form-control:focus) {
-    border-bottom: 1px solid white;
+    border-bottom: 2px solid white;
     transition: all 0.5s;
 }
 .label .icon {
@@ -52,7 +58,6 @@ img {
     width: 18%;
     padding: 30px;
     border-radius: 5px;
-    color: #fff;
     margin: 0 auto;
     position: fixed;
     top: 50%;
@@ -69,9 +74,10 @@ img {
 .btn-secondary {
     background: transparent;
     border: none;
+}
 
-    &:hover {
-        background: transparent;
-        color: rgb(61, 104, 221);
-    }
+.btn-secondary:hover {
+    color: rgb(61, 104, 221); 
+    background: transparent;
+    
 }
