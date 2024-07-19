@@ -10,7 +10,7 @@ class Users(db.Model):
     """
     Table for Users
     """
-    __tablename__ = "user_list"
+    __tablename__ = "users"
 
     user_id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -55,7 +55,7 @@ class Events(db.Model):
     """
     Table for Events
     """
-    __tablename__ = "Events"
+    __tablename__ = "events"
     user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     event_type = db.Column(db.String, nullable=False)
     title = db.Column(db.String, nullable=False)
@@ -112,7 +112,7 @@ class Meets(db.Model):
     """
     Table for Meets
     """
-    __tablename__ = "Meets"
+    __tablename__ = "meets"
     user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     meet_type = db.Column(db.String, nullable=False)
     title = db.Column(db.String, nullable=False)
@@ -169,7 +169,7 @@ class Emails(db.Model):
     """
     Table for Emails
     """
-    __tablename__ = "Emails"
+    __tablename__ = "emails"
     user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     email_type = db.Column(db.String, nullable=False)
     title = db.Column(db.String, nullable=False)

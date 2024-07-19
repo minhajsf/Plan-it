@@ -50,11 +50,11 @@ def root():
 def register():
     form = RegistrationForm()
     if form.validate_on_submit():  
-        existing_user = User.query.filter_by(email=form.email.data).first()
+        existing_user = Users.query.filter_by(email=form.email.data).first()
         if existing_user:
             flash('Email already taken. Please use a different email.', 'danger')
             return redirect(url_for('register'))
-        user = User(email=form.email.data)
+        user = Users(email=form.email.data)
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
@@ -67,7 +67,7 @@ def register():
 def login():
     form = LoginForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
+        user = Users.query.filter_by(email=form.email.data).first()
         if user and user.check_password(form.password.data):
             session['user_id'] = user.id
             flash(f'Login successful for {form.email.data}', 'success')
