@@ -47,6 +47,7 @@ GMEET_SCOPES = ['https://www.googleapis.com/auth/meetings.space.created']
 
 @app.route('/')
 def index():
+    print("'index' route hit", file=sys.stderr)
     return render_template('ioExample.html')
 
 
@@ -102,6 +103,7 @@ def gcal():
     """
     Endpoint for Google Calendar.
     """
+    print("'gcal' route hit", file=sys.stderr)
 
     # CALENDAR DATABASE SETUP
     db_filename = "events.db"
@@ -176,6 +178,8 @@ def gcal():
 # Create a calendar event
 @app.route('/gcal_create', methods=['POST'])
 def gcal_create():
+
+    print("'gcal_create' route hit", file=sys.stderr)
 
     prompt = getattr(g, 'user_prompt')
 
