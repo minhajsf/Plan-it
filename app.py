@@ -200,31 +200,6 @@ def gcal():
             print(f"{filename} does not exist.")
         gcal()
 
-    # completion = client.chat.completions.create(
-    #     model="gpt-3.5-turbo",
-    #     messages=[
-    #         {"role": "system", "content": "You are a helpful assistant."},
-    #         {"role": "user", "content": f"""Determine if the following prompt is meant to Create, Update, 
-    #                                     or Remove an event and return either 'Create', 'Update', or 'Remove':
-    #                                     {getattr(g, 'user_prompt')}"""}
-    #     ]
-    # )
-    # eventType = completion.choices[0].message.content
-    # print("Event Type (2nd GPT Call): " + eventType, file=sys.stderr)
-
-
-    # Create Event
-    # if eventType == "Create" or eventType == "create":
-    #     return redirect(url_for('gcal_create'))
-    # elif eventType == "Update" or eventType == "update":
-    #     return redirect(url_for('gcal_update'))
-    # elif eventType == "Remove" or eventType == "remove":
-    #     return redirect(url_for('gcal_remove'))
-    # else:
-    #     print("""Please try again with a correct event type (Insert, Update, 
-    #           Remove).""")
-    #     exit(1)
-
 
 # Create a calendar event
 def gcal_create():
@@ -325,7 +300,6 @@ def gcal_create():
 
 
 # Update a calendar event
-@app.route('/gcal_update', methods=['POST'])
 def gcal_update():
     # get the exact title of event from user
     event_title = str(input("""\nYou are going to Update an event!
@@ -415,7 +389,6 @@ def gcal_update():
 
 
 # Remove a calendar event
-@app.route('/gcal_remove', methods=['POST'])
 def gcal_remove():
     # get the exact title of event from user
     event_title = str(input('''\nYou are going to Remove an event!
