@@ -11,18 +11,26 @@ body {
     
     
 }
+h1, h2, p, .navbar a, footer{
+    color: white;
+}
 .content  {
     min-height: 100vh;
     justify-content: center;
     align-items:center;
     text-align: center;
 }
+
 .navbar h1 {
     font-size: 50px;
     
 }
+
+.btn {
+    pointer-events: auto;
+}
 #intro-container h1{
-    font-size: 140px;
+    font-size: 120px;
     
 }
 #intro-container p{
@@ -99,8 +107,12 @@ img {
     width: 120px;
     height: 120px;
 }
+body hr {
+    border:0.5px solid white;
+    margin: 20px 0;
+}
 footer {
-    font-size: 20px;
+    font-size: 15px;
     text-align: center;
 }
 

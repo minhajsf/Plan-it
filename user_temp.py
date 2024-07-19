@@ -31,6 +31,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from flask import Flask, render_template, url_for, flash, redirect, request, session
 
+
 app = Flask(__name__)
 proxied = FlaskBehindProxy(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
@@ -42,9 +43,25 @@ with app.app_context():
 
 @app.route('/')
 def root():
-    return render_template('anothervoice.html', title='Record')
-    ##return redirect(url_for('login'))
 
+    ##return render_template('voice.html', title='Record')
+    return redirect(url_for('home'))
+
+@app.route('/home')
+def home():
+    return render_template('home.html')
+
+@app.route('/chat')
+def chat():
+    return render_template('chat.html')
+
+    
+    ##return redirect(url_for('login'))
+    
+@app.route('/voice')
+def voice():
+  return render_template('anothervoice.html', title='Record')
+  
 
 @app.route("/register", methods=['GET', 'POST'])
 def register():
@@ -73,7 +90,7 @@ def login():
             flash(f'Login successful for {form.email.data}', 'success')
         else:
             flash('Login Unsuccessful. Please check email and password', 'danger')
-            return redirect(url_for('login'))
+            return redirect(url_for('chat'))
     return render_template('login.html', title='Login', form=form)
 
 
@@ -94,9 +111,8 @@ def login_required(f):
 
     return decorated_function
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=True, ssl_context='adhoc')
 
 if __name__ == "__main__":
     context = ("local.crt", "local.key")
     app.run(debug=True, ssl_context=context)
+

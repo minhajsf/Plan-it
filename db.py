@@ -38,7 +38,7 @@ class Users(db.Model):
 
         return{
             "user_id": self.user_id,
-            "email": self.email
+            "email": self.email,
         }
     
     def incr_serialize(self):

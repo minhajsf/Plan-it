@@ -21,16 +21,16 @@
             {% endfor %}
         {% endif %}
     {% endwith %}
+    <h1>Plan-it</h1>
     <div class="container mt-5">
         <div id="register-form" class="form-section">
-            <h1>Flick Found</h1>
+            <h2>Register</h2>
             <form method="POST" class="mb-3">
                 {{ form.hidden_tag() }}
                 <fieldset class="form-group">
                     <div class="form-group">
-                        <p>Email:</p>
-                        <div class = "label">
-                            <img src="{{ url_for('static', filename='img/User.png') }}" width="50" height="50"> 
+                        <div class = "label"> 
+                            <img src = "{{url_for('static', filename='img/User.png')}}" alt = "User" class = "icon">
                             {% if form.email.errors %}
                                 {{ form.email(class="form-control form-control-lg is-invalid") }}
                                 <div class="invalid-feedback">
@@ -39,13 +39,13 @@
                                     {% endfor %}
                                 </div>
                             {% else %}
-                                {{ form.email(class="form-control form-control-lg") }}
+                                {{ form.email(class="form-control form-control-lg", placeholder="Email") }}
                             {% endif %}        
                         </div>
                     </div>
                     <div class="form-group">
-                        <p>Password:</p>
                         <div class = "label">
+                            <img src = "{{url_for('static', filename='img/Key.png')}}" alt = "User" class = "icon">
                             {% if form.password.errors %}
                                 {{ form.password(class="form-control form-control-lg is-invalid") }}
                                 <div class="invalid-feedback">
@@ -54,13 +54,13 @@
                                     {% endfor %}
                                 </div>
                             {% else %}
-                                {{ form.password(class="form-control form-control-lg") }}
+                                {{ form.password(class="form-control form-control-lg", placeholder="Password") }}
                             {% endif %}
                         </div>
                     </div>
                     <div class="form-group">
-                        <p>Confirm Password:</p>
                         <div class = "label">
+                            <img src = "{{url_for('static', filename='img/Key.png')}}" alt = "User" class = "icon">
                             {% if form.confirm_password.errors %}
                                 {{ form.confirm_password(class="form-control form-control-lg is-invalid") }}
                                 <div class="invalid-feedback">
@@ -69,14 +69,14 @@
                                     {% endfor %}
                                 </div>
                             {% else %}
-                                {{ form.confirm_password(class="form-control form-control-lg") }}
+                                {{ form.confirm_password(class="form-control form-control-lg", placeholder="Confirm Password") }}
                             {% endif %}
                         </div>
                     </div>
                 </fieldset>
                 <div class="button-container">
                     <a href="{{ url_for('login') }}" class="btn btn-secondary" id = "show-login">Already registered? Login here</a>
-                    {{ form.submit(class="btn-btn-primary") }}
+                    {{ form.submit(class="btn btn-primary") }}
                 </div>
             </form>
         </div>
