@@ -55,20 +55,24 @@ class Events(db.Model):
     """
     Table for Events
     """
-    __tablename__ = "events"
-    user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+
+    __tablename__ = "Events"
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer)
+
     event_type = db.Column(db.String, nullable=False)
     title = db.Column(db.String, nullable=False)
     description = db.Column(db.String, nullable=False)
     start = db.Column(db.String, nullable=False)
     end = db.Column(db.String, nullable=False)
-    event_id = db.Column(db.Integer, nullable=False)
+    event_id = db.Column(db.String, nullable=False)
     event_dictionary = db.Column(db.String, nullable=False)
 
     def __init__(self, **kwargs):
         """
         Initializes Event object.
         """
+        self.id = kwargs.get("id", "")
         self.user_id = kwargs.get("user_id", "")
         self.event_type = kwargs.get("event_type", "")
         self.title = kwargs.get("title", "")
@@ -83,6 +87,7 @@ class Events(db.Model):
         Serializes an Event object.
         """
         return {
+            "id": self.id,
             "user_id": self.user_id,
             "event_type": self.event_type,
             "title": self.title,
@@ -98,6 +103,7 @@ class Events(db.Model):
         Incr Serializes an Event object so an infinite loop does not occur.
         """
         return {
+            "id": self.id,
             "user_id": self.user_id,
             "event_type": self.event_type,
             "title": self.title,
@@ -112,20 +118,24 @@ class Meets(db.Model):
     """
     Table for Meets
     """
-    __tablename__ = "meets"
-    user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+
+    __tablename__ = "Meets"
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, autoincrement=True)
+
     meet_type = db.Column(db.String, nullable=False)
     title = db.Column(db.String, nullable=False)
     description = db.Column(db.String, nullable=False)
     start = db.Column(db.String, nullable=False)
     end = db.Column(db.String, nullable=False)
-    meet_id = db.Column(db.Integer, nullable=False)
+    meet_id = db.Column(db.String, nullable=False)
     meet_dictionary = db.Column(db.String, nullable=False)
 
     def __init__(self, **kwargs):
         """
         Initializes Meet object.
         """
+        self.id = kwargs.get("id", "")
         self.user_id = kwargs.get("user_id", "")
         self.meet_type = kwargs.get("meet_type", "")
         self.title = kwargs.get("title", "")
@@ -140,6 +150,7 @@ class Meets(db.Model):
         Serializes an Meet object.
         """
         return {
+            "id": self.id,
             "user_id": self.user_id,
             "meet_type": self.meet_type,
             "title": self.title,
@@ -155,6 +166,7 @@ class Meets(db.Model):
         Incr Serializes an Meet object so an infinite loop does not occur.
         """
         return {
+            "id": self.id,
             "user_id": self.user_id,
             "meet_type": self.meet_type,
             "title": self.title,
@@ -169,20 +181,24 @@ class Emails(db.Model):
     """
     Table for Emails
     """
-    __tablename__ = "emails"
-    user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+
+    __tablename__ = "Emails"
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, autoincrement=True)
+
     email_type = db.Column(db.String, nullable=False)
     title = db.Column(db.String, nullable=False)
     description = db.Column(db.String, nullable=False)
     start = db.Column(db.String, nullable=False)
     end = db.Column(db.String, nullable=False)
-    email_id = db.Column(db.Integer, nullable=False)
+    email_id = db.Column(db.String, nullable=False)
     email_dictionary = db.Column(db.String, nullable=False)
 
     def __init__(self, **kwargs):
         """
         Initializes Email object.
         """
+        self.id = kwargs.get("id", "")
         self.user_id = kwargs.get("user_id", "")
         self.email_type = kwargs.get("email_type", "")
         self.title = kwargs.get("title", "")
@@ -197,6 +213,7 @@ class Emails(db.Model):
         Serializes an Email object.
         """
         return {
+            "id": self.id,
             "user_id": self.user_id,
             "email_type": self.email_type,
             "title": self.title,
@@ -212,6 +229,7 @@ class Emails(db.Model):
         Incr Serializes an Email object so an infinite loop does not occur.
         """
         return {
+            "id": self.id,
             "user_id": self.user_id,
             "email_type": self.email_type,
             "title": self.title,

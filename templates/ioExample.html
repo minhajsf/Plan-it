@@ -8,8 +8,8 @@
 </head>
 <body>
     <div id="chat"></div>
-    <input id="message" autocomplete="off">
-    <button onclick="sendMessage()">Send</button>
+    <input id="prompt" autocomplete="off">
+    <button onclick="sendPrompt()">Send</button>
     <script>
         const socket = io();
 
@@ -25,13 +25,19 @@
             console.log('Server:', response);
         });
 
-        function sendMessage() {
-            const message = document.getElementById('message').value.trim();
-            if (message !== '') {
-                socket.emit('user_message', message);
-                document.getElementById('message').value = '';
+        socket.on('redirect_to_app', function(data) {
+            window.location.href = data.url;
+        });
+
+        function sendPrompt() {
+            const prompt = document.getElementById('prompt').value.trim();
+            if (prompt !== '') {
+                socket.emit('user_prompt', prompt);
+                document.getElementById('prompt').value = '';
             }
         }
+
+        socket.on
     </script>
 </body>
 </html>
