@@ -36,7 +36,15 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 proxied = FlaskBehindProxy(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
 
+
 # Database setup
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+app.config["SQLALCHEMY_ECHO"] = False
+db.init_app(app)
+with app.app_context():
+    db.create_all()
+
 
 db_filename = "plan-it.db"
 
@@ -167,7 +175,20 @@ def gcal():
     """
     Endpoint for Google Calendar.
     """
+
     print("'gcal' route hit", file=sys.stderr)
+
+
+    # CHATGPT API
+    # Get OPENAI_API_KEY from environment variables
+    load_dotenv()
+    my_api_key = os.getenv('OPENAI_API_KEY')
+
+    # Create an OpenAPI client using the API key
+    g.client = OpenAI(
+        api_key=my_api_key,
+    )
+
 
     # GOOGLE CALENDAR API
     creds = None
@@ -459,19 +480,6 @@ def gmeet():
     Endpoint for Google Meet.
     """
 
-    # MEETS DATABASE SETUP
-    db_filename = "meets.db"
-
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///%s" % db_filename
-    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-    # Print SQLAlchemy INFO logs (True) Silence SQLAlchemy INFO logs (False)
-    app.config["SQLALCHEMY_ECHO"] = False
-
-    db.init_app(app)
-    
-    db.create_all()
-
     creds = None
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
@@ -529,20 +537,7 @@ def gmail():
     """
     Endpoint for Gmail.
     """
-
-    # EMAILS DATABASE SETUP
-    db_filename = "emails.db"
-
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///%s" % db_filename
-    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-    # Print SQLAlchemy INFO logs (True) Silence SQLAlchemy INFO logs (False)
-    app.config["SQLALCHEMY_ECHO"] = False
-
-    db.init_app(app)
     
-    db.create_all()
-
     return "Gmail"
 
 # Creates a draft (not message to allow for updating before sending)

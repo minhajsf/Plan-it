@@ -20,28 +20,29 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
+        <h1>Plan-it</h1>
         <div id="login-form" class="form-section">
-            <h1>Flick Found</h1>
+            <h2>Login</h2>
             <form method="POST" class="mb-3">
                 {{ form.hidden_tag() }}
                 <div class="form-group">
-                    <p>Email:</p>
                     <div class = "label">
-                        {% if form.email.errors %}
-                          {{ form.email(class="form-control form-control-lg is-invalid") }}
-                           <div class=“invalid-feedback”>
-                            {% for error in form.email.errors %}
-                                <span>{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        {{ form.email(class="form-control form-control-lg") }}
-                    {% endif %}
+                        <img src = "{{url_for('static', filename='img/User.png')}}" alt = "User" class = "icon">
+                            {% if form.email.errors %}
+                            {{ form.email(class="form-control form-control-lg is-invalid") }}
+                            <div class=“invalid-feedback”>
+                                {% for error in form.email.errors %}
+                                    <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            {{ form.email(class="form-control form-control-lg", placeholder="Email") }}
+                        {% endif %}
                     </div>
                 </div>
                 <div class="form-group">
-                    <p>Password:</p>
                     <div class = "label">
+                        <img src = "{{url_for('static', filename='img/Key.png')}}" alt = "User" class = "icon">
                             {% if form.password.errors %}
                                 {{ form.password(class="form-control form-control-lg is-invalid") }}
                                 <div class="invalid-feedback">
@@ -50,13 +51,13 @@
                                     {% endfor %}
                                 </div>
                             {% else %}
-                                {{ form.password(class="form-control form-control-lg") }}
+                                {{ form.password(class="form-control form-control-lg", placeholder="Password") }}
                             {% endif %}
                     </div>
                 </div>
                 <div class="button-container">
                     <a href="{{ url_for('register') }}" class="btn btn-secondary" id = "show-register">No Account? Create One here</a>
-                    {{ form.submit(class="btn-btn-primary") }}
+                    {{ form.submit(class="btn btn-primary") }}
                 </div>
             </form>
         </div>
