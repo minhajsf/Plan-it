@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 from openai import OpenAI
 from db import db
-from db import Event, User
+from db import Events, Users
 from flask import Flask, jsonify
 from flask import request
 import os
@@ -31,6 +31,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from flask import Flask, render_template, url_for, flash, redirect, request, session
 
+
 app = Flask(__name__)
 proxied = FlaskBehindProxy(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
@@ -43,18 +44,26 @@ with app.app_context():
 @app.route('/')
 def root():
     ##return render_template('voice.html', title='Record')
-    return redirect(url_for('login'))
+    return redirect(url_for('home'))
+
+@app.route('/home')
+def home():
+    return render_template('home.html')
+
+@app.route('/chat')
+def chat():
+    return render_template('chat.html')
 
 
 @app.route("/register", methods=['GET', 'POST'])
 def register():
     form = RegistrationForm()
     if form.validate_on_submit():  
-        existing_user = User.query.filter_by(email=form.email.data).first()
+        existing_user = Users.query.filter_by(email=form.email.data).first()
         if existing_user:
             flash('Email already taken. Please use a different email.', 'danger')
             return redirect(url_for('register'))
-        user = User(email=form.email.data)
+        user = Users(email=form.email.data)
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
@@ -67,13 +76,13 @@ def register():
 def login():
     form = LoginForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
+        user = Users.query.filter_by(email=form.email.data).first()
         if user and user.check_password(form.password.data):
             session['user_id'] = user.id
             flash(f'Login successful for {form.email.data}', 'success')
         else:
             flash('Login Unsuccessful. Please check email and password', 'danger')
-            return redirect(url_for('login'))
+            return redirect(url_for('chat'))
     return render_template('login.html', title='Login', form=form)
 
 
@@ -95,4 +104,4 @@ def login_required(f):
     return decorated_function
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=True, ssl_context='adhoc')
+    app.run(host="0.0.0.0", port=8000, debug=True)
