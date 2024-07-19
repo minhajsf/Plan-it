@@ -86,7 +86,10 @@ def handle_user_prompt(prompt):
     g.user_prompt = prompt
     prompt_type = determine_query_type(prompt)
     print("Prompt type (1st GPT Call): " + prompt_type, file=sys.stderr)
-    return redirect(url_for(prompt_type))
+    
+    emit('redirect_to_app',{"url": url_for(prompt_type)})
+    #with app.app_context():
+    #    return redirect(url_for(prompt_type))
     # emit('server_response', f'Server received: {message}', room=request.sid)
 
 

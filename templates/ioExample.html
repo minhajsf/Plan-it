@@ -25,6 +25,10 @@
             console.log('Server:', response);
         });
 
+        socket.on('redirect_to_app', function(data) {
+            window.location.href = data.url;
+        });
+
         function sendPrompt() {
             const prompt = document.getElementById('prompt').value.trim();
             if (prompt !== '') {
@@ -32,6 +36,8 @@
                 document.getElementById('prompt').value = '';
             }
         }
+
+        socket.on
     </script>
 </body>
 </html>
