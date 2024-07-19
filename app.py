@@ -46,7 +46,7 @@ GMEET_SCOPES = ['https://www.googleapis.com/auth/meetings.space.created']
 
 @app.route('/')
 def index():
-    return render_template('home.html')
+    return render_template('ioExample.html')
 
 
 @socketio.on('connect')
