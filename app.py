@@ -141,8 +141,16 @@ def handle_user_prompt(prompt):
             print("Please try again. The program only works for Create, Update, and Remove.", file=sys.stderr)
             exit(1)
     elif prompt_dictionary['event_type'].lower() == "gmeet":
-        # gmeet()
-        return 1  
+        gmeet()
+        if prompt_dictionary['mode'].lower() == "create":
+            gcal_create()
+        elif prompt_dictionary['mode'].lower() == "update":
+            gcal_update()
+        elif prompt_dictionary['mode'].lower() == "remove":
+            gcal_remove()
+        else:
+            print("Please try again. The program only works for Create, Update, and Remove.", file=sys.stderr)
+            exit(1)
     elif prompt_dictionary['event_type'].lower() == "gmail":
         # gmail()
         return 1
