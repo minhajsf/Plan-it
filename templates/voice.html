@@ -13,104 +13,98 @@
 
     <script src="https://cdn.rawgit.com/zhuker/lamejs/master/lame.min.js"></script>
     <script>
-        const recordButton = document.getElementById('recordButton');
-        const stopButton = document.getElementById('stopButton');
-        const audioPlayback = document.getElementById('audioPlayback');
-        const downloadLink = document.getElementById('downloadLink');
+    const recordButton = document.getElementById('recordButton');
+    const stopButton = document.getElementById('stopButton');
+    const audioPlayback = document.getElementById('audioPlayback');
+    const downloadLink = document.getElementById('downloadLink');
 
-        let mediaRecorder;
-        let audioChunks = [];
+    let mediaRecorder;
+    let audioChunks = [];
 
-        recordButton.addEventListener('click', async () => {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
+    recordButton.addEventListener('click', async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
 
-                mediaRecorder.ondataavailable = event => {
+            mediaRecorder.ondataavailable = event => {
+                if (event.data.size > 0) {
                     audioChunks.push(event.data);
-                };
-
-                mediaRecorder.onstop = async () => {
-                    console.log('Recording stopped');
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                    console.log('WAV Blob created', audioBlob);
-
-                    // Play WAV Blob directly for debugging
-                    const wavUrl = URL.createObjectURL(audioBlob);
-                    audioPlayback.src = wavUrl;
-                    console.log('Playing WAV Blob', wavUrl);
-
-                    // Decode WAV Blob
-                    const arrayBuffer = await audioBlob.arrayBuffer();
-                    const audioBuffer = await decodeAudioData(arrayBuffer);
-                    if (audioBuffer) {
-                        console.log('Audio Buffer', audioBuffer);
-
-                        // Encode to MP3 and play
-                        const mp3Blob = encodeMP3(audioBuffer);
-                        const mp3Url = URL.createObjectURL(mp3Blob);
-                        console.log('MP3 Blob created', mp3Blob);
-                        console.log('Playing MP3 Blob', mp3Url);
-
-                        // Set MP3 as audio source and download link
-                        audioPlayback.src = mp3Url;
-                        downloadLink.href = mp3Url;
-                        downloadLink.style.display = 'block';
-
-                        audioChunks = [];
-                    } else {
-                        console.error('Failed to decode WAV Blob');
-                    }
-                };
-
-                mediaRecorder.start();
-                console.log('Recording started');
-                recordButton.disabled = true;
-                stopButton.disabled = false;
-            } catch (error) {
-                console.error('Error accessing media devices.', error);
-            }
-        });
-
-        stopButton.addEventListener('click', () => {
-            mediaRecorder.stop();
-            recordButton.disabled = false;
-            stopButton.disabled = true;
-        });
-
-        async function decodeAudioData(arrayBuffer) {
-            try {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                return await audioContext.decodeAudioData(arrayBuffer);
-            } catch (error) {
-                console.error('Error decoding audio data.', error);
-                return null;
-            }
-        }
-
-        function encodeMP3(audioBuffer) {
-            const sampleRate = audioBuffer.sampleRate;
-            const mp3Encoder = new lamejs.Mp3Encoder(1, sampleRate, 128); // Mono, 128kbps
-            const samples = audioBuffer.getChannelData(0);
-            const sampleBlockSize = 1152;
-            let mp3Data = [];
-
-            for (let i = 0; i < samples.length; i += sampleBlockSize) {
-                const sampleChunk = samples.subarray(i, i + sampleBlockSize);
-                const mp3buf = mp3Encoder.encodeBuffer(sampleChunk);
-                if (mp3buf.length > 0) {
-                    mp3Data.push(mp3buf);
                 }
-            }
+            };
 
-            const mp3buf = mp3Encoder.flush();
+            mediaRecorder.onstop = async () => {
+                console.log('Recording stopped');
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                console.log('WAV Blob created', audioBlob);
+
+                // Play WAV Blob directly for debugging
+                const wavUrl = URL.createObjectURL(audioBlob);
+                audioPlayback.src = wavUrl;
+                await audioPlayback.play();
+                console.log('Playing WAV Blob', wavUrl);
+
+                // Decode WAV Blob to audio buffer
+                const arrayBuffer = await audioBlob.arrayBuffer();
+                const audioBuffer = await decodeAudioData(arrayBuffer);
+                console.log('Audio Buffer', audioBuffer);
+
+                // Encode to MP3 and play
+                const mp3Blob = encodeMP3(audioBuffer);
+                const mp3Url = URL.createObjectURL(mp3Blob);
+                console.log('MP3 Blob created', mp3Blob);
+                console.log('Playing MP3 Blob', mp3Url);
+
+                // Set MP3 as audio source and download link
+                audioPlayback.src = mp3Url;
+                downloadLink.href = mp3Url;
+                downloadLink.style.display = 'block';
+
+                audioChunks = [];
+            };
+
+            mediaRecorder.start();
+            console.log('Recording started');
+            recordButton.disabled = true;
+            stopButton.disabled = false;
+        } catch (error) {
+            console.error('Error accessing media devices.', error);
+        }
+    });
+
+    stopButton.addEventListener('click', () => {
+        mediaRecorder.stop();
+        recordButton.disabled = false;
+        stopButton.disabled = true;
+    });
+
+    async function decodeAudioData(arrayBuffer) {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        return await audioContext.decodeAudioData(arrayBuffer);
+    }
+
+    function encodeMP3(audioBuffer) {
+        const sampleRate = audioBuffer.sampleRate;
+        const mp3Encoder = new lamejs.Mp3Encoder(1, sampleRate, 128); // Mono, 128kbps
+        const samples = audioBuffer.getChannelData(0);
+        const sampleBlockSize = 1152;
+        let mp3Data = [];
+
+        for (let i = 0; i < samples.length; i += sampleBlockSize) {
+            const sampleChunk = samples.subarray(i, i + sampleBlockSize);
+            const mp3buf = mp3Encoder.encodeBuffer(sampleChunk);
             if (mp3buf.length > 0) {
                 mp3Data.push(mp3buf);
             }
-
-            console.log('MP3 Data Length:', mp3Data.length);
-            return new Blob(mp3Data, { type: 'audio/mp3' });
         }
+
+        const mp3buf = mp3Encoder.flush();
+        if (mp3buf.length > 0) {
+            mp3Data.push(mp3buf);
+        }
+
+        console.log('MP3 Data Length:', mp3Data.length);
+        return new Blob(mp3Data, { type: 'audio/mp3' });
+    }
     </script>
 </body>
 </html>

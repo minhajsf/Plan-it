@@ -43,6 +43,7 @@ with app.app_context():
 
 @app.route('/')
 def root():
+
     ##return render_template('voice.html', title='Record')
     return redirect(url_for('home'))
 
@@ -54,6 +55,13 @@ def home():
 def chat():
     return render_template('chat.html')
 
+    
+    ##return redirect(url_for('login'))
+    
+@app.route('/voice')
+def voice():
+  return render_template('anothervoice.html', title='Record')
+  
 
 @app.route("/register", methods=['GET', 'POST'])
 def register():
@@ -103,5 +111,8 @@ def login_required(f):
 
     return decorated_function
 
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=True)
+    context = ("local.crt", "local.key")
+    app.run(debug=True, ssl_context=context)
+
