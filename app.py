@@ -1,6 +1,7 @@
 import os
 import json
 import sys
+import re
 from flask import Flask, jsonify, render_template, url_for, flash, redirect, request, session, g, request
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_behind_proxy import FlaskBehindProxy
@@ -35,6 +36,19 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 proxied = FlaskBehindProxy(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
 
+# Database setup
+
+db_filename = "plan-it.db"
+
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///%s" % db_filename
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# Print SQLAlchemy INFO logs (True) Silence SQLAlchemy INFO logs (False)
+app.config["SQLALCHEMY_ECHO"] = False
+db.init_app(app)
+with app.app_context():
+    db.create_all()
+
 # ChatGPT API Setup
 client = OpenAI(
     api_key=OPENAI_API_KEY,
@@ -66,28 +80,76 @@ def handle_disconnect():
     session.clear()
 
 
-def determine_query_type(prompt):
-    # this can be modified so that we only make one instance per session itf
-    completion = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": f"""Determine if the following message is related to either Gmail, Google Meet, or a 
-                                        Google Calendar event. Once you have determined that, only respond with 'gcal', 'gmeet', "
-                                        or 'gmail' in that exact spelling and in lowercase: {prompt}"""}
-        ]
-    )
-    response = completion.choices[0].message.content
-    return response
+def determine_query_type(message: str):
+    try:
+        # Ideally we remove the creation part and make it global itf
+        client = OpenAI(api_key=OPENAI_API_KEY)
+        # Make API request
+        completion = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system",
+                 "content": """You are an assistant that determines if a message is related to either Google Calendar,
+                            Google Meet, or Gmail. Return a json response as {'event_type': , 
+                            'mode': , 'title': } where type is gcal, gmeet, or gmail. If the type is gcal or gmeet, the mode
+                            can be create, update, or remove. For email, the mode can be create, update, or send"""},
+                {"role": "user", "content": f"The message is the following: {message}"}
+            ]
+        )
+        response = json.loads(completion.choices[0].message.content)
+
+        # Error handling -- can be removed in prod!
+        print(type(response))
+        print(response)
+
+        return response  # response is dict with keys event_type, mode, and title
+    except Exception as e:
+        print(f"Error processing message: {e}")
+        return {"event_type": "unknown", "mode": "unknown"}
+
 
 @socketio.on('user_prompt')
 def handle_user_prompt(prompt):
+
     print("User prompt recieved: " + prompt, file=sys.stderr)
-    g.user_prompt = prompt
-    prompt_type = determine_query_type(prompt)
-    print("Prompt type (1st GPT Call): " + prompt_type, file=sys.stderr)
-    
-    emit('redirect_to_app',{"url": url_for(prompt_type)})
+
+    # add in prompt to dictionary directly
+    # saves time on the gpt call in determine_query_type
+    prompt_dictionary = determine_query_type(prompt)
+    prompt_dictionary['prompt'] = prompt
+
+    # make the prompt_dictionary a session variable (global to the flask session)
+    session['prompt_dictionary'] = prompt_dictionary
+    print("Prompt type (1st GPT Call): " + prompt_dictionary['event_type'], file=sys.stderr)
+
+    if prompt_dictionary['event_type'].lower() == "gcal":
+
+        # Setup GCal API
+        # initialize events.db (Events table)
+        gcal()
+
+        # mode = prompt_dictionary['mode'].lower()
+        # eval(f"gcal_{mode}()")
+        if prompt_dictionary['mode'].lower() == "create":
+            gcal_create()
+        elif prompt_dictionary['mode'].lower() == "update":
+            gcal_update()
+        elif prompt_dictionary['mode'].lower() == "remove":
+            gcal_remove()
+        else:
+            print("Please try again. The program only works for Create, Update, and Remove.", file=sys.stderr)
+            exit(1)
+    elif prompt_dictionary['event_type'].lower() == "gmeet":
+        # gmeet()
+        return 1  
+    elif prompt_dictionary['event_type'].lower() == "gmail":
+        # gmail()
+        return 1
+    else:
+        print("Please try again. The program only works for Google Calendar, Google Meet, and Gmail.", file=sys.stderr)
+        exit(1)
+
     #with app.app_context():
     #    return redirect(url_for(prompt_type))
     # emit('server_response', f'Server received: {message}', room=request.sid)
@@ -100,26 +162,12 @@ def handle_user_prompt(prompt):
 # -----------------------------------------------------------------------
 #
 
-@app.route('/gcal', methods=['GET'])
 def gcal():
 
     """
     Endpoint for Google Calendar.
     """
     print("'gcal' route hit", file=sys.stderr)
-
-    # CALENDAR DATABASE SETUP
-    db_filename = "events.db"
-
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///%s" % db_filename
-    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-    # Print SQLAlchemy INFO logs (True) Silence SQLAlchemy INFO logs (False)
-    app.config["SQLALCHEMY_ECHO"] = False
-
-    db.init_app(app)
-    
-    db.create_all()
 
     # GOOGLE CALENDAR API
     creds = None
@@ -152,39 +200,38 @@ def gcal():
             print(f"{filename} does not exist.")
         gcal()
 
-    completion = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": f"""Determine if the following prompt is meant to Create, Update, 
-                                        or Remove an event and return either 'Create', 'Update', or 'Remove':
-                                        {getattr(g, 'user_prompt')}"""}
-        ]
-    )
-    eventType = completion.choices[0].message.content
-    print("Event Type (2nd GPT Call): " + eventType, file=sys.stderr)
+    # completion = client.chat.completions.create(
+    #     model="gpt-3.5-turbo",
+    #     messages=[
+    #         {"role": "system", "content": "You are a helpful assistant."},
+    #         {"role": "user", "content": f"""Determine if the following prompt is meant to Create, Update, 
+    #                                     or Remove an event and return either 'Create', 'Update', or 'Remove':
+    #                                     {getattr(g, 'user_prompt')}"""}
+    #     ]
+    # )
+    # eventType = completion.choices[0].message.content
+    # print("Event Type (2nd GPT Call): " + eventType, file=sys.stderr)
 
 
     # Create Event
-    if eventType == "Create" or eventType == "create":
-        return redirect(url_for('gcal_create'))
-    elif eventType == "Update" or eventType == "update":
-        return redirect(url_for('gcal_update'))
-    elif eventType == "Remove" or eventType == "remove":
-        return redirect(url_for('gcal_remove'))
-    else:
-        print("""Please try again with a correct event type (Insert, Update, 
-              Remove).""")
-        exit(1)
+    # if eventType == "Create" or eventType == "create":
+    #     return redirect(url_for('gcal_create'))
+    # elif eventType == "Update" or eventType == "update":
+    #     return redirect(url_for('gcal_update'))
+    # elif eventType == "Remove" or eventType == "remove":
+    #     return redirect(url_for('gcal_remove'))
+    # else:
+    #     print("""Please try again with a correct event type (Insert, Update, 
+    #           Remove).""")
+    #     exit(1)
 
 
 # Create a calendar event
-@app.route('/gcal_create', methods=['POST'])
 def gcal_create():
 
     print("'gcal_create' route hit", file=sys.stderr)
 
-    prompt = getattr(g, 'user_prompt')
+    prompt = session['prompt_dictionary']['prompt']
 
     # PROMPT
     # get localhost time zone
@@ -195,16 +242,10 @@ def gcal_create():
 
     # Create a prompt for GPT API
     insert_format_instruction = f"""
-    For your response input the following prompt information
-    in the exact format below. Make sure to start your response
-    at the first left curly brace of the event dictionary.
-    Understand that the current time is currently.
+    Understand that the current date is {current_datetime}.
+    Based on the following prompt, populate the JSON format below.
     Don't change anything about any attributes that the user
-    does not give a specification to (including case of
-    characters). PLEASE LEAVE True as True not lowercase true.
-    {current_datetime}:
-
-    {prompt}
+    does not give a specification to. Prompt: {prompt} JSON format:
 
     event = {{
     "summary": "insert_title_here",
@@ -220,6 +261,8 @@ def gcal_create():
     }},
     "reminders": {{
         "useDefault": True
+
+
     }}
     }}
     """
@@ -227,6 +270,7 @@ def gcal_create():
     # response (event dictionary)
     completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
+        response_format={"type": "json_object"}, # response is ALWAYS json, include json in prompt to work
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": insert_format_instruction}
@@ -239,6 +283,8 @@ def gcal_create():
     response = response[response.index("{"):
                         len(response) - response[::-1].index("}")]
     print("Response Dict (3rd GPT Call): " + response, file=sys.stderr)
+
+    response = re.sub(r"\btrue\b", "True", response) # GPT API inconsistent with capitalization w True
 
     # Converts response string to a dictionary
     insert_event_dict = eval(response)
