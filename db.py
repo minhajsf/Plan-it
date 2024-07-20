@@ -115,10 +115,11 @@ class Meets(db.Model):
     __tablename__ = "meets"
     user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     meet_type = db.Column(db.String, nullable=False)
-    title = db.Column(db.String, nullable=False)
+    summary = db.Column(db.String, nullable=False)
     description = db.Column(db.String, nullable=False)
     start = db.Column(db.String, nullable=False)
     end = db.Column(db.String, nullable=False)
+    attendees = db.Column(db.String, nullable=False)
     meet_id = db.Column(db.Integer, nullable=False)
     meet_dictionary = db.Column(db.String, nullable=False)
 
@@ -128,10 +129,11 @@ class Meets(db.Model):
         """
         self.user_id = kwargs.get("user_id", "")
         self.meet_type = kwargs.get("meet_type", "")
-        self.title = kwargs.get("title", "")
+        self.summary = kwargs.get("summary", "")
         self.description = kwargs.get("description", "")
         self.start = kwargs.get("start", "")
         self.end = kwargs.get("end", "")
+        self.attendees = kwargs.get("attendees", "")
         self.meet_id = kwargs.get("meet_id", "")
         self.meet_dictionary = kwargs.get("meet_dictionary", "")
 
@@ -142,10 +144,11 @@ class Meets(db.Model):
         return {
             "user_id": self.user_id,
             "meet_type": self.meet_type,
-            "title": self.title,
+            "summary": self.summary,
             "description": self.description,
             "start": self.start,
             "end": self.end,
+            "attendees": self.attendees,
             "meet_id": self.meet_id,
             "meet_dictionary": self.meet_dictionary
         }
@@ -157,10 +160,11 @@ class Meets(db.Model):
         return {
             "user_id": self.user_id,
             "meet_type": self.meet_type,
-            "title": self.title,
+            "summary": self.summary,
             "description": self.description,
             "start": self.start,
             "end": self.end,
+            "attendees": self.attendees,
             "meet_id": self.meet_id,
             "meet_dictionary": self.meet_dictionary
         }

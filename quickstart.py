@@ -1,49 +1,107 @@
-from __future__ import print_function
-
-import os.path
-
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
-from google.apps import meet_v2
+from googleapiclient.discovery import build
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
+import os
+import uuid
 
+SCOPES = ['https://www.googleapis.com/auth/calendar.events']
 
-# If modifying these scopes, delete the file token.json.
-GMEET_SCOPES = ['https://www.googleapis.com/auth/meetings.space.created']
+# Initialize credentials
+creds = None
+if os.path.exists("token.json"):
+    creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+if not creds or not creds.valid:
+    if creds and creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+    else:
+        flow = InstalledAppFlow.from_client_secrets_file(
+            "credentials.json", SCOPES
+        )
+        creds = flow.run_local_server(port=8080)
+    with open("token.json", "w") as token:
+        token.write(creds.to_json())
 
+# Build the service
+service = build("calendar", "v3", credentials=creds)
 
-def main():
-    """Shows basic usage of the Google Meet API.
-    """
-    creds = None
-    # The file token.json stores the user's access and refresh tokens, and is
-    # created automatically when the authorization flow completes for the first
-    # time.
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', GMEET_SCOPES)
-    # If there are no (valid) credentials available, let the user log in.
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', GMEET_SCOPES)
-            creds = flow.run_local_server(port=8080)
-        # Save the credentials for the next run
-        with open('token.json', 'w') as token:
-            token.write(creds.to_json())
+def create_google_meet(service, event_data):
+    request_id = str(uuid.uuid4())
+    event_data['conferenceData'] = {
+        'createRequest': {
+            'requestId': request_id,
+            'conferenceSolutionKey': {
+                'type': 'hangoutsMeet'
+            },
+        }
+    }
+    event = service.events().insert(
+        calendarId='primary',
+        body=event_data,
+        conferenceDataVersion=1
+    ).execute()
+    return event
 
-    try:
-        client = meet_v2.SpacesServiceClient(credentials=creds)
-        request = meet_v2.CreateSpaceRequest()
-        response = client.create_space(request=request)
-        print(f'Space created: {response.meeting_uri}')
-    except Exception as error:
-        # TODO(developer) - Handle errors from Meet API.
-        print(f'An error occurred: {error}')
+def update_google_meet(service, event_id, updated_event_data):
+    event = service.events().patch(
+        calendarId='primary',
+        eventId=event_id,
+        body=updated_event_data,
+        conferenceDataVersion=1
+    ).execute()
+    return event
 
-    return "Google Meet"
+def delete_google_meet(service, event_id):
+    service.events().delete(
+        calendarId='primary',
+        eventId=event_id
+    ).execute()
 
+# Example usage
+event_data = {
+    'summary': 'Meeting with Google Meet',
+    'description': 'Discuss project updates.',
+    'start': {
+        'dateTime': '2024-07-19T09:00:00-07:00',
+        'timeZone': 'America/Los_Angeles',
+    },
+    'end': {
+        'dateTime': '2024-07-19T10:00:00-07:00',
+        'timeZone': 'America/Los_Angeles',
+    },
+    'attendees': [
+        {'email': 'attendee1@example.com'},
+        {'email': 'attendee2@example.com'}
+    ]
+}
 
-if __name__ == '__main__':
-    main()
+# Create event with Google Meet link
+created_event = create_google_meet(service, event_data)
+print(f"Created event: {created_event}")
+
+# The Google Meet link
+meet_link = created_event.get('hangoutLink')
+print(f"Google Meet Link: {meet_link}")
+
+# Get event ID
+event_id = created_event['id']
+
+# Update event
+updated_event_data = {
+    'summary': 'Updated Meeting with Google Meet',
+    'description': 'Discuss project updates and new tasks.',
+    'start': {
+        'dateTime': '2024-07-19T11:00:00-07:00',
+        'timeZone': 'America/Los_Angeles',
+    },
+    'end': {
+        'dateTime': '2024-07-19T12:00:00-07:00',
+        'timeZone': 'America/Los_Angeles',
+    }
+}
+updated_event = update_google_meet(service, event_id, updated_event_data)
+print(f"Updated event: {updated_event}")
+
+# Delete event
+# delete_google_meet(service, event_id)
+print(f"Deleted event with ID: {event_id}")
