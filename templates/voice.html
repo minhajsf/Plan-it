@@ -28,9 +28,10 @@
             margin-left: 5px;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>
 </head>
 <body>
-    <button id="startButton">Start Recording </button>
+    <button id="startButton">Start Recording</button>
     <button id="stopButton">Stop Recording</button>
     <p id="outputText"></p>
 
@@ -38,7 +39,21 @@
         const startButton = document.getElementById('startButton');
         const stopButton = document.getElementById('stopButton');
         const outputText = document.getElementById('outputText');
+        const socket = io();
+
         let response = "";
+
+        const correctPunctuation = (transcript) => {
+            transcript = transcript.trim();
+            transcript = transcript.charAt(0).toUpperCase() + transcript.slice(1);
+            if (!/[.!?]$/.test(transcript)) {
+                transcript += '.';
+            }
+            transcript = transcript.replace(/\s([,.!?])/g, '$1');
+            transcript = transcript.replace(/([.!?]\s)([a-z])/g, (match, p1, p2) => p1 + p2.toUpperCase());
+            transcript = transcript.replace(/([.!?])([A-Z])/g, '$1 $2');
+            return transcript;
+        };
 
         if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -78,12 +93,26 @@
             });
 
             recognition.onend = () => {
-                startButton.style.display = 'inline-block';
-                stopButton.style.display = 'none';
+                const correctedResponse = correctPunctuation(response.trim());
+                outputText.textContent = correctedResponse;
+                // Send the corrected response to the backend via socket
+                socket.emit('user-message', correctedResponse);
             };
         } else {
             outputText.textContent = "Speech recognition not supported in this browser.";
         }
+
+        socket.on('connect', () => {
+            console.log('Connected to server');
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+        });
+
+        socket.on('server_response', (response) => {
+            console.log('Server:', response);
+        });
     </script>
 </body>
 </html>
