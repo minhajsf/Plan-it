@@ -30,30 +30,29 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from flask import Flask, render_template, url_for, flash, redirect, request, session
+from flask_migrate import Migrate
+
+load_dotenv()
+
 
 
 app = Flask(__name__)
 proxied = FlaskBehindProxy(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
-
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+db.init_app(app)
+with app.app_context():
+    db.create_all()
+
+migrate = Migrate(app, db)
+
 db.init_app(app)
 with app.app_context():
     db.create_all()
 
 @app.route('/')
 def root():
-    ##return render_template('voice.html', title='Record')
     return redirect(url_for('home'))
-
-@app.route('/home')
-def home():
-    return render_template('home.html')
-
-@app.route('/chat')
-def chat():
-    return render_template('chat.html')
-
 
 @app.route("/register", methods=['GET', 'POST'])
 def register():
@@ -80,6 +79,7 @@ def login():
         if user and user.check_password(form.password.data):
             session['user_id'] = user.id
             flash(f'Login successful for {form.email.data}', 'success')
+            return redirect(url_for('chat'))
         else:
             flash('Login Unsuccessful. Please check email and password', 'danger')
             return redirect(url_for('chat'))
@@ -103,5 +103,18 @@ def login_required(f):
 
     return decorated_function
 
+@app.route('/home')
+def home():
+    return render_template('home.html')
+
+@app.route('/chat')
+@login_required
+def chat():
+    return render_template('chat.html')
+    
+@app.route('/voice')
+def voice():
+  return render_template('voice.html', title='Record')
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=True)
+    app.run(host="0.0.0.0", port=8000, debug=True, ssl_context='adhoc')

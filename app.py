@@ -35,18 +35,17 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 proxied = FlaskBehindProxy(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
 
+
+
 # Database setup
-
-db_filename = "plan-it.db"
-
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///%s" % db_filename
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///plan-it.db'
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-# Print SQLAlchemy INFO logs (True) Silence SQLAlchemy INFO logs (False)
 app.config["SQLALCHEMY_ECHO"] = False
+migrate = Migrate(app, db)
 db.init_app(app)
 with app.app_context():
     db.create_all()
+
 
 # ChatGPT API Setup
 client = OpenAI(
@@ -119,7 +118,6 @@ def handle_user_prompt(prompt):
 
     # make the prompt_dictionary a session variable (global to the flask session)
     session['prompt_dictionary'] = prompt_dictionary
-    print("Prompt type (1st GPT Call): " + prompt_dictionary['event_type'], file=sys.stderr)
 
     if prompt_dictionary['event_type'].lower() == "gcal":
 
@@ -170,7 +168,22 @@ def gcal():
     """
     Endpoint for Google Calendar.
     """
+
     print("'gcal' route hit", file=sys.stderr)
+
+
+    # CHATGPT API
+    # Get OPENAI_API_KEY from environment variables
+    load_dotenv()
+    my_api_key = os.getenv('OPENAI_API_KEY')
+
+    # Create an OpenAPI client using the API key
+    g.client = OpenAI(
+        api_key=my_api_key,
+    )
+
+
+    # GOOGLE CALENDAR API
     creds = None
     if os.path.exists("token.json"):
         creds = Credentials.from_authorized_user_file("token.json", GCAL_SCOPES)
@@ -198,36 +211,12 @@ def gcal():
             print(f"{filename} does not exist.")
         gcal()
 
-    # completion = client.chat.completions.create(
-    #     model="gpt-3.5-turbo",
-    #     messages=[
-    #         {"role": "system", "content": "You are a helpful assistant."},
-    #         {"role": "user", "content": f"""Determine if the following prompt is meant to Create, Update, 
-    #                                     or Remove an event and return either 'Create', 'Update', or 'Remove':
-    #                                     {getattr(g, 'user_prompt')}"""}
-    #     ]
-    # )
-    # eventType = completion.choices[0].message.content
-    # print("Event Type (2nd GPT Call): " + eventType, file=sys.stderr)
-
-    # Create Event
-    # if eventType == "Create" or eventType == "create":
-    #     return redirect(url_for('gcal_create'))
-    # elif eventType == "Update" or eventType == "update":
-    #     return redirect(url_for('gcal_update'))
-    # elif eventType == "Remove" or eventType == "remove":
-    #     return redirect(url_for('gcal_remove'))
-    # else:
-    #     print("""Please try again with a correct event type (Insert, Update, 
-    #           Remove).""")
-    #     exit(1)
-
-
 # Create a calendar event
 def gcal_create():
     print("'gcal_create' route hit", file=sys.stderr)
 
     prompt = session['prompt_dictionary']['prompt']
+    title = session['prompt_dictionary']['title']
 
     # PROMPT
     # get localhost time zone
@@ -244,9 +233,8 @@ def gcal_create():
     does not give a specification to. Prompt: {prompt} JSON format:
 
     event = {{
-    "summary": "insert_title_here",
-    "description": "any extra specifications, locations,
-    and descriptions here",
+    "summary": "{title}",
+    "description": "<insert_description_specifications_here>",
     "start": {{
         "dateTime": " "2015-05-28T09:00:00-07:00",
         "timeZone": "{timeZone}"
@@ -278,18 +266,20 @@ def gcal_create():
 
     response = response[response.index("{"):
                         len(response) - response[::-1].index("}")]
-    print("Response Dict (3rd GPT Call): " + response, file=sys.stderr)
 
-    response = re.sub(r"\btrue\b", "True", response)  # GPT API inconsistent with capitalization w True
+
+    # Fixes the capitalization of True in the response
+    response = re.sub(r"\btrue\b", "True", response)
 
     # Converts response string to a dictionary
     insert_event_dict = eval(response)
 
     # event description string for printing purposes
-    event_description = f'''\nEvent - Title: {insert_event_dict["summary"]}
-    \t\tDescription: {insert_event_dict["description"]}
+    event_description = f'''\nEvent: 
+    \nTitle: {insert_event_dict["summary"]}
+    \nDescription: {insert_event_dict["description"]}
     \nStart Time: {insert_event_dict["start"]["dateTime"]}
-    \t\t\tEnd Time: {insert_event_dict["end"]["dateTime"]}\n'''
+    \nEnd Time: {insert_event_dict["end"]["dateTime"]}\n'''
 
     # Creates new event in calendar
     insert_event = getattr(g, 'service').events().insert(
@@ -301,8 +291,7 @@ def gcal_create():
     # Add to database
     # Add to database
     new_event = Events(
-        # user_id
-        user_id=1,  # fixme
+        user_id=session['user_id'],
         event_type="Create",
         title=insert_event_dict.get("summary"),
         description=insert_event_dict.get("description"),
@@ -314,37 +303,33 @@ def gcal_create():
     db.session.add(new_event)
     db.session.commit()
 
-    print(event_description)
-    print('Event created! Check your Google Calendar to confirm!\n')
+    print(event_description, file=sys.stderr)
+    print('Event created! Check your Google Calendar to confirm!\n', file=sys.stderr)
 
-    return insert_event_dict.get("summary")
+    return insert_event_dict["summary"]
 
 
 # Update a calendar event
-@app.route('/gcal_update', methods=['POST'])
 def gcal_update():
-    # get the exact title of event from user
-    event_title = str(input("""\nYou are going to Update an event!
-                                Which event on your calendar would you
-                                like to update? (Exact title): """))
-    # User changes
-    event_update = str(input('''What would you like to change
-                                about the event?: '''))
+
+    print("'gcal_update' route hit", file=sys.stderr)
+
+    event_title = session['prompt_dictionary']['title']
+    event_update = session['prompt_dictionary']['prompt']
 
     event = Events.query.filter_by(title=event_title).first()
     current_event = event.event_dictionary
     current_event_id = event.event_id
 
+    current_datetime = datetime.now()
+
     # Update format instruction
     update_format_instruction = f'''
-    For your response, update the following format with any
-    updated/changed information in the give prompt. Keep the
-    attributes the same if no changes are mentioned/if the change
-    is redundant (same info as current event).
-    Don't change anything about any attributes that the user
-    does not give a specification to (including case of
-    characters). PLEASE LEAVE True as True not lowercase true.
-    prompt = "{event_update}"
+    Understand that the current date is {current_datetime}.
+    Based on the following prompt, update the values of the following JSON format 
+    with any updates/changes. Keep the attribute values the same including the date/time
+    if no changes are mentioned within the prompt or if the change is redundant 
+    (same info as current event). Prompt: "{event_update}"
 
     Format of current event:
 
@@ -366,16 +351,18 @@ def gcal_update():
 
     response = response[response.index("{"):
                         len(response) - response[::-1].index("}")]
-    # print(response)
+    
+    # Fixes the capitalization of True in the response
+    response = re.sub(r"\btrue\b", "True", response)
 
     # Converts response string to a dictionary
     updated_event_dict = eval(response)
 
-    event_description = f"""\nUpdated Event:
+    updated_event_description = f"""\nUpdated Event:
     \nEvent - Title: {updated_event_dict["summary"]}
-    \t\tDescription: {updated_event_dict["description"]}
+    \nDescription: {updated_event_dict["description"]}
     \nStart Time: {updated_event_dict["start"]["dateTime"]}
-    \t\t\tEnd Time: {updated_event_dict["end"]["dateTime"]}\n"""
+    \nEnd Time: {updated_event_dict["end"]["dateTime"]}\n"""
 
     # # Update the event
     updated_event = getattr(g, 'service').events().update(
@@ -384,12 +371,9 @@ def gcal_update():
         body=updated_event_dict
     ).execute()
 
-    # Get the event id
-    updated_event_id = updated_event['id']
-    # Add to database
     # Add to database
     new_event = Events(
-        user_id=1,
+        user_id=session['user_id'],
         event_type="Update",
         title=updated_event_dict.get("summary"),
         description=updated_event_dict.get("description"),
@@ -404,72 +388,71 @@ def gcal_update():
     db.session.add(new_event)
     db.session.commit()
 
-    print(event_description)
-    print('Event Updated! Check your Google Calendar to confirm!\n')
+    print(updated_event_description, file=sys.stderr)
+    print('Event Updated! Check your Google Calendar to confirm!\n', file=sys.stderr)
 
     return updated_event["summary"]
 
 
 # Remove a calendar event
-@app.route('/gcal_remove', methods=['POST'])
 def gcal_remove():
-    # get the exact title of event from user
-    event_title = str(input('''\nYou are going to Remove an event!
-                            Which event on your calendar would you like
-                            to remove? (Exact title): '''))
+
+    print("'gcal_remove' route hit", file=sys.stderr)
+
+    event_title = session['prompt_dictionary']['title']
 
     # perform a query on the database for the title
     event = Events.query.filter_by(title=event_title).first()
+
+    if event:
+        print(f"Event found: {event_title}", file=sys.stderr)
+    else:
+        print(f"Event not found: {event_title}", file=sys.stderr)
+        exit(1)
+    
     current_event = event.event_dictionary
     current_event_id = event.event_id
 
     deleted_event_dict = eval(current_event)
 
-    current_event_description = f"""
-    Event - Title: {deleted_event_dict["summary"]}
-    \t\tDescription: {deleted_event_dict["description"]}
+    deleted_event_description = f"""Event: \n
+    \nTitle: {deleted_event_dict["summary"]}
+    \nDescription: {deleted_event_dict["description"]}
     \nStart Time: {deleted_event_dict["start"]["dateTime"]}
-    \t\t\tEnd Time: {deleted_event_dict["end"]["dateTime"]}\n"""
+    \nEnd Time: {deleted_event_dict["end"]["dateTime"]}\n"""
 
-    confirmation = str(input(f"""Event To-Be-Deleted: \n
-                                {current_event_description}
-                                Are you sure you want this event deleted?
-                                (y/n): """))
+    #
+    #
+    #ADD SOME WAY TO WARN THE USER THAT THEY ARE DELETING AN EVENT (y/n)
+    #
+    #
 
-    if confirmation == "y":
+    getattr(g, 'service').events().delete(
+        calendarId='primary',
+        eventId=current_event_id
+    ).execute()
 
-        getattr(g, 'service').events().delete(
-            calendarId='primary',
-            eventId=current_event_id
-        ).execute()
+    # Add to database
+    new_event = Events(
+        user_id=session['user_id'],
+        event_type="Remove",
+        title=deleted_event_dict.get("summary"),
+        description=deleted_event_dict.get("description"),
+        start=deleted_event_dict.get("start").get("dateTime"),
+        end=deleted_event_dict.get("end").get("dateTime"),
 
-        # Add to database
-        new_event = Events(
-            user_id=1,
-            event_type="Remove",
-            title=deleted_event_dict.get("summary"),
-            description=deleted_event_dict.get("description"),
-            start=deleted_event_dict.get("start").get("dateTime"),
-            end=deleted_event_dict.get("end").get("dateTime"),
+        # leave the event_id as the the Create event id.
+        # This is to keep track of which event you deleted
+        event_id=current_event_id,
+        event_dictionary=current_event
+    )
+    db.session.add(new_event)
+    db.session.commit()
 
-            # leave the event_id as the the Create event id.
-            # This is to keep track of which event you deleted
-            event_id=current_event_id,
-            event_dictionary=current_event
-        )
-        db.session.add(new_event)
-        db.session.commit()
+    print(deleted_event_description, file=sys.stderr)
+    print('Event Deleted! Check your Google Calendar to confirm!\n', file=sys.stderr)
 
-        return deleted_event_dict.get("summary")
-
-    elif confirmation == "n":
-        print("""\nOk. Please try again with the exact event title that you
-                want removed.""")
-        return None
-    else:
-        print("\nYou have inputed an unsupported response. Please try" +
-              "again")
-        return None
+    return deleted_event_dict["summary"]
 
 
 #
@@ -693,20 +676,6 @@ def gmail():
     """
     Endpoint for Gmail.
     """
-
-    # EMAILS DATABASE SETUP
-    db_filename = "emails.db"
-
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///%s" % db_filename
-    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-    # Print SQLAlchemy INFO logs (True) Silence SQLAlchemy INFO logs (False)
-    app.config["SQLALCHEMY_ECHO"] = False
-
-    db.init_app(app)
-
-    db.create_all()
-
     return "Gmail"
 
 
