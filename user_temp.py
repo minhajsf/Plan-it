@@ -46,10 +46,6 @@ with app.app_context():
 
 migrate = Migrate(app, db)
 
-db.init_app(app)
-with app.app_context():
-    db.create_all()
-
 @app.route('/')
 def root():
     return redirect(url_for('home'))
