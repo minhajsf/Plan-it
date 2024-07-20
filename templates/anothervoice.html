@@ -12,32 +12,44 @@
     <script>
         const startButton = document.getElementById('startButton');
         const outputText = document.getElementById('outputText');
+        let response = "";
 
         if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             const recognition = new SpeechRecognition();
 
-            recognition.continuous = true;
+            recognition.continuous = false;
             recognition.interimResults = true;
+            let silenceTimeout;
 
             recognition.onresult = (event) => {
                 const result = event.results[event.results.length - 1];
                 const transcript = result[0].transcript;
-                outputText.textContent = transcript;
+                outputText.textContent = response;
+
+                clearTimeout(silenceTimeout);
+                silenceTimeout = setTimeout(() => {
+                    recognition.stop();
+                }, 3000);
             };
 
             recognition.onerror = (event) => {
                 console.error('Speech recognition error:', event.error);
+                clearTimeout(silenceTimeout);
+                startButton.disabled = false;
             };
 
             startButton.addEventListener('click', () => {
+                response = ""; // Reset the response for a new recording session
                 recognition.start();
                 startButton.disabled = true;
             });
 
             recognition.onend = () => {
                 startButton.disabled = false;
+                clearTimeout(silenceTimeout);
             };
+        console.log(response);
         } else {
             outputText.textContent = "Speech recognition not supported in this browser.";
         }
