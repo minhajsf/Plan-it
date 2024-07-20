@@ -186,12 +186,11 @@ class Emails(db.Model):
     __tablename__ = "Emails"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, autoincrement=True)
-
-    email_type = db.Column(db.String, nullable=False)
-    title = db.Column(db.String, nullable=False)
-    description = db.Column(db.String, nullable=False)
-    start = db.Column(db.String, nullable=False)
-    end = db.Column(db.String, nullable=False)
+    email_type = db.Column(db.String, nullable=True)
+    subject = db.Column(db.String, nullable=False)
+    body = db.Column(db.String, nullable=False)
+    to = db.Column(db.String, nullable=False)
+    sender = db.Column(db.String, nullable=False)
     email_id = db.Column(db.String, nullable=False)
     email_dictionary = db.Column(db.String, nullable=False)
 
@@ -201,10 +200,10 @@ class Emails(db.Model):
         """
         self.user_id = kwargs.get("user_id", "")
         self.email_type = kwargs.get("email_type", "")
-        self.title = kwargs.get("title", "")
-        self.description = kwargs.get("description", "")
-        self.start = kwargs.get("start", "")
-        self.end = kwargs.get("end", "")
+        self.subject = kwargs.get("subject", "")
+        self.body = kwargs.get("body", "")
+        self.to = kwargs.get("to", "")
+        self.sender = kwargs.get("sender", "")
         self.email_id = kwargs.get("email_id", "")
         self.email_dictionary = kwargs.get("email_dictionary", "")
 
@@ -216,10 +215,10 @@ class Emails(db.Model):
             "id": self.id,
             "user_id": self.user_id,
             "email_type": self.email_type,
-            "title": self.title,
-            "description": self.description,
-            "start": self.start,
-            "end": self.end,
+            "subject": self.subject,
+            "body": self.body,
+            "to": self.to,
+            "sender": self.sender,
             "email_id": self.email_id,
             "email_dictionary": self.email_dictionary
         }
@@ -232,10 +231,10 @@ class Emails(db.Model):
             "id": self.id,
             "user_id": self.user_id,
             "email_type": self.email_type,
-            "title": self.title,
-            "description": self.description,
-            "start": self.start,
-            "end": self.end,
+            "subject": self.subject,
+            "body": self.body,
+            "to": self.to,
+            "sender": self.sender,
             "email_id": self.email_id,
             "email_dictionary": self.email_dictionary
         }
