@@ -623,7 +623,7 @@ def gmeet_create():
         start=event_data.get('start'),
         end=event_data.get('end'),
         attendees=convert_dict_to_str(event_data.get('attendees')),
-        meet_dictionary=event_data
+        meet_dictionary=json.dumps(event_data)
     )
 
     db.session.add(new_meeting)
@@ -663,6 +663,7 @@ def gmeet_update():
     meeting.end = event_data.get('end')
     meeting.meet_id = event.get('id')
     meeting.attendees = convert_dict_to_str(event_data.get('attendees'))
+    meeting.meet_dictionary = json.dumps(event_data)
 
     db.session.commit()
     print("Meeting updated successfully.")
