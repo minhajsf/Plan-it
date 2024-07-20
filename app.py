@@ -58,7 +58,6 @@ GCAL_SCOPES = ['https://www.googleapis.com/auth/calendar',
 
 GMEET_SCOPES = ['https://www.googleapis.com/auth/meetings.space.created']
 
-
 @app.route('/')
 def index():
     print("'index' route hit", file=sys.stderr)
@@ -679,7 +678,7 @@ def gmeet_remove():
     delete_google_meet(g.service, meeting_to_remove)
 
     # remove from our db
-    meeting_to_remove.delete()
+    db.session.delete(meeting_to_remove)
     db.session.commit()
 
 #
