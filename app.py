@@ -18,6 +18,7 @@ import datetime
 from datetime import datetime
 from tzlocal import get_localzone
 import uuid
+import base64
 import os.path
 import urllib3
 from google.auth.transport.requests import Request
@@ -91,7 +92,8 @@ def determine_query_type(message: str):
                  "content": """You are an assistant that determines if a message is related to either Google Calendar,
                             Google Meet, or Gmail. Return a json response as {'event_type': , 
                             'mode': , 'title': } where type is gcal, gmeet, or gmail. If the type is gcal or gmeet, the mode
-                            can be create, update, or remove. For email, the mode can be create, update, or send"""},
+                            can be create, update, or remove. For email, the mode can be create, update, or send. Add 
+                            the subject to title field if needed"""},
                 {"role": "user", "content": f"The message is the following: {message}"}
             ]
         )
@@ -148,7 +150,19 @@ def handle_user_prompt(prompt):
             print("Please try again. The program only works for Create, Update, and Remove.", file=sys.stderr)
             exit(1)
     elif prompt_dictionary['event_type'].lower() == "gmail":
-        # gmail()
+        gmail_setup()
+        if prompt_dictionary['mode'].lower() == "create":
+            gmail_create()
+        elif prompt_dictionary['mode'].lower() == "update":
+            gmail_update()
+        elif prompt_dictionary['mode'].lower() == "send":
+            gmail_send()
+        elif prompt_dictionary['mode'].lower() == "remove":
+            print("This is an error. You cannot delete a draft currently")
+            raise NotImplementedError  # todo if time
+        else:
+            print("Please try again. The program only works for Create, Update, and Remove.", file=sys.stderr)
+            exit(1)
         return 1
     else:
         print("Please try again. The program only works for Google Calendar, Google Meet, and Gmail.", file=sys.stderr)
@@ -586,8 +600,8 @@ def gmeet_setup():
             with open("token.json", "w") as token:
                 token.write(creds.to_json())
         return build("calendar", "v3", credentials=creds)
-
-    g.service = get_google_service()  # global used throughout the gmeet section
+    if not hasattr(g, 'service'):
+        g.service = get_google_service()  # global used throughout the gmeet section
 
 
 def gmeet_create():
@@ -605,6 +619,7 @@ def gmeet_create():
         description=event_data.get('description'),
         start=event_data.get('start'),
         end=event_data.get('end'),
+        meet_id=event.get('id'),
         attendees=convert_dict_to_str(event_data.get('attendees')),
         meet_dictionary=json.dumps(event_data)
     )
@@ -635,7 +650,7 @@ def gmeet_update():
     instructions = format_system_instructions_for_meeting(prompt_dict, meeting_content)
 
     # formatted response from gpt --> can be passed directly into create or remove
-    event_data = gpt_format_json(instructions, meeting_content)
+    event_data = gpt_format_json(instructions, prompt_dict.get('title'))
 
     event = update_google_meet(g.service, meeting_id, event_data)
 
@@ -659,7 +674,7 @@ def gmeet_remove():
     meeting_to_remove = Meets.query.filter_by(summary=summary_of_meeting).first()
 
     # remove it from calendar
-    delete_google_meet(g.service, meeting_to_remove)
+    delete_google_meet(g.service, meeting_to_remove.meet_id)
 
     # remove from our db
     db.session.delete(meeting_to_remove)
@@ -670,31 +685,193 @@ def gmeet_remove():
 # GMAIL ROUTES
 # -----------------------------------------------------------------------
 #
+def get_authenticated_user_email(service):
+    try:
+        profile = service.users().getProfile(userId='me').execute()
+        return profile['emailAddress']
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
+
+
+def email_json_to_raw(email_json):
+    from_field = email_json['from'][0]  # Assuming `from_list` has a single email
+    to_field = ', '.join(email_json['to'])
+    cc_field = ', '.join(email_json['cc']) if email_json['cc'] else ''
+
+    raw_email = f"""From: {from_field}
+To: {to_field}
+Cc: {cc_field}
+Subject: {email_json['subject']}
+Content-Type: text/plain; charset="UTF-8"
+
+{email_json['body']}
+"""
+    return raw_email
+
+
+
+def format_system_instructions_for_gmail(query_type_dict: dict, content_dict: dict = None) -> str:
+    recipient = content_dict.get('to') if content_dict else '<recipient_email>'
+    subject = content_dict.get('subject') if content_dict else '<email_subject>'
+    body = content_dict.get('body') if content_dict else '<email_body>'
+    sender = content_dict.get('from', 'noreply@example.com') if content_dict else 'noreply@example.com'
+    cc = content_dict.get('cc', []) if content_dict else []
+
+    instructions = f"""
+    You are an assistant that {query_type_dict.get('mode', 'create')}s an email using a sample JSON format.
+    Leave unspecified attributes unchanged. Ensure the subject and body are professional and informative.
+    Current_time: {datetime.now()}
+    email = {{
+        "from": "{sender}",
+        "to": {recipient},
+        "cc": {cc},
+        "subject": "{subject}",
+        "body": "{body}"
+    }}
+    """
+    print(type(instructions))
+    print(instructions)
+    return instructions.strip()
+
+
+def create_gmail_draft(service, message_body_raw):
+    try:
+        message = {
+            'message': {
+                'raw': base64.urlsafe_b64encode(message_body_raw.encode('utf-8')).decode('utf-8')
+            }
+        }
+        draft = service.users().drafts().create(userId='me', body=message).execute()
+        return draft
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
+
+
+def update_gmail_draft(service, draft_id, updated_message_body_raw):
+    try:
+        message = {
+            'message': {
+                'raw': base64.urlsafe_b64encode(updated_message_body_raw.encode('utf-8')).decode('utf-8')
+            }
+        }
+        draft = service.users().drafts().update(userId='me', id=draft_id, body=message).execute()
+        return draft
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
+
+def send_gmail_draft(service, draft_id):
+    try:
+        # draft =
+        service.users().drafts().send(userId='me', body={'id': draft_id}).execute()
+        print("Draft sent successfully")
+        # return draft
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 @app.route('/gmail', methods=['GET'])
-def gmail():
+def gmail_setup():
     """
     Endpoint for Gmail.
     """
-    return "Gmail"
+    def get_gmail_service():
+        if hasattr(g, 'service'):
+            return
+        creds = None
+        if os.path.exists("token.json"):
+            creds = Credentials.from_authorized_user_file("token.json", GCAL_SCOPES)
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            else:
+                flow = InstalledAppFlow.from_client_secrets_file(
+                    "credentials.json", GCAL_SCOPES
+                )
+                creds = flow.run_local_server(port=8080)
+            with open("token.json", "w") as token:
+                token.write(creds.to_json())
+        return build("calendar", "v3", credentials=creds)
+    if not hasattr(g, 'gmail_service'):
+        g.gmail_service = get_gmail_service() # global specific to session
 
 
 # Creates a draft (not message to allow for updating before sending)
-@app.route('/gmail_create', methods=['GET'])
 def gmail_create():
-    return "Gmail Create"
+    prompt_dict = session.get('prompt_dictionary')
+    prompt = prompt_dict.get('prompt')
+
+    content_dict = {'sender': f"{get_authenticated_user_email(g.gmail_service)}"}
+    instructions = format_system_instructions_for_gmail(prompt_dict, content_dict)
+
+    created_email_json = gpt_format_json(instructions, prompt)
+    created_email_raw = email_json_to_raw(created_email_json)
+    draft = create_gmail_draft(g.gmail_service, created_email_raw)
+
+    # save draft in db
+
+    newly_drafted_email = Emails(
+        # todo add user id field also
+        subject=created_email_json['subject'],
+        body=created_email_json['body'],
+        sender=created_email_json['from'],
+        cc=created_email_json['cc'],
+        to=created_email_json['to'],
+        email_id=draft.get('id'),
+        email_dictionary=json.dumps(created_email_json),
+    )
+    db.session.add(newly_drafted_email)
+    db.session.commit()
+    print("Gmail draft created successfully")
+
 
 
 # Updates a draft
-@app.route('/gmail_update', methods=['GET'])
 def gmail_update():
-    return "Gmail Update"
+    prompt_dict = session.get('prompt_dictionary')
+
+    draft_to_update = Emails.query.filter_by(subject=prompt_dict.get('title')).first()
+
+    if not draft_to_update:
+        print("No Gmail draft found")
+        return
+
+    draft_serialized = draft_to_update.serialize()
+    draft_id = draft_to_update.email_id
+
+    instructions = format_system_instructions_for_gmail(prompt_dict, draft_serialized)
+
+    updated_draft_json = gpt_format_json(instructions, prompt_dict.get('title'))
+    updated_draft_raw = email_json_to_raw(updated_draft_json)
+
+    updated_draft = update_gmail_draft(g.gmail_service, draft_id, updated_draft_raw)
+
+    draft_to_update.subject = updated_draft_json.get('subject')
+    draft_to_update.body = updated_draft_json.get('body')
+    draft_to_update.cc = updated_draft_json.get('cc')
+    draft_to_update.to = updated_draft_json.get('to')
+    draft_to_update.email_dictionary = json.dumps(updated_draft_json)
+    # from draft itself not json
+    draft_to_update.email_id = updated_draft.get('id')
+    # I chose to not allow the sender to be updated bc that doesnt make sense
+
+    db.session.commit()
+    print("Email draft updated successfully")
 
 
 # Sends a draft
-@app.route('/gmail_send', methods=['GET'])
 def gmail_send():
-    return "Gmail Send"
+    # title is key of subject in determine_query_type
+    subject_of_email = session['prompt_dictionary']['title']
+    email_to_send = Emails.query.filter_by(subject=subject_of_email).first()
+
+    if email_to_send:
+        send_gmail_draft(g.gmail_service, email_to_send.email_id)
+
+        # remove from db bc its sent, so you can't edit it again anyway
+        db.session.delete(email_to_send)
+        db.session.commit()
 
 
 if __name__ == "__main__":
