@@ -1,5 +1,5 @@
 import os
-import base64
+    import base64
 import json
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -31,6 +31,7 @@ def get_gmail_service():
     service = build("gmail", "v1", credentials=creds)
     return service
 
+# Not needed
 def create_email_json(from_list, to, cc, subject, body):
     email = {
         "from": from_list,
@@ -56,11 +57,11 @@ Content-Type: text/plain; charset="UTF-8"
 """
     return raw_email
 
-def create_gmail_draft(service, message_body):
+def create_gmail_draft(service, message_body_raw):
     try:
         message = {
             'message': {
-                'raw': base64.urlsafe_b64encode(message_body.encode('utf-8')).decode('utf-8')
+                'raw': base64.urlsafe_b64encode(message_body_raw.encode('utf-8')).decode('utf-8')
             }
         }
         draft = service.users().drafts().create(userId='me', body=message).execute()
@@ -69,11 +70,11 @@ def create_gmail_draft(service, message_body):
         print(f"An error occurred: {e}")
         return None
 
-def update_gmail_draft(service, draft_id, updated_message_body):
+def update_gmail_draft(service, draft_id, updated_message_body_raw):
     try:
         message = {
             'message': {
-                'raw': base64.urlsafe_b64encode(updated_message_body.encode('utf-8')).decode('utf-8')
+                'raw': base64.urlsafe_b64encode(updated_message_body_raw.encode('utf-8')).decode('utf-8')
             }
         }
         draft = service.users().drafts().update(userId='me', id=draft_id, body=message).execute()
@@ -84,11 +85,13 @@ def update_gmail_draft(service, draft_id, updated_message_body):
 
 def send_gmail_draft(service, draft_id):
     try:
-        draft = service.users().drafts().send(userId='me', body={'id': draft_id}).execute()
-        return draft
+        # draft =
+        service.users().drafts().send(userId='me', body={'id': draft_id}).execute()
+        print("Draft sent successfully")
+        # return draft
     except Exception as e:
         print(f"An error occurred: {e}")
-        return None
+        # return None
 
 def main():
     service = get_gmail_service()

@@ -210,6 +210,7 @@ class Emails(db.Model):
     def serialize(self):
         """
         Serializes an Email object.
+        KEY IS FROM, KEY IS NOT SENDER
         """
         return {
             "id": self.id,
@@ -218,7 +219,7 @@ class Emails(db.Model):
             "subject": self.subject,
             "body": self.body,
             "to": self.to,
-            "sender": self.sender,
+            "from": self.sender,
             "email_id": self.email_id,
             "email_dictionary": self.email_dictionary
         }
