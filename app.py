@@ -148,7 +148,19 @@ def handle_user_prompt(prompt):
             print("Please try again. The program only works for Create, Update, and Remove.", file=sys.stderr)
             exit(1)
     elif prompt_dictionary['event_type'].lower() == "gmail":
-        # gmail()
+        gmail_setup()
+        if prompt_dictionary['mode'].lower() == "create":
+            gmail_create()
+        elif prompt_dictionary['mode'].lower() == "update":
+            gmail_update()
+        elif prompt_dictionary['mode'].lower() == "send":
+            gmail_send()
+        elif prompt_dictionary['mode'].lower() == "remove":
+            print("This is an error. You cannot delete a draft currently")
+            raise NotImplementedError  # todo if time
+        else:
+            print("Please try again. The program only works for Create, Update, and Remove.", file=sys.stderr)
+            exit(1)
         return 1
     else:
         print("Please try again. The program only works for Google Calendar, Google Meet, and Gmail.", file=sys.stderr)
@@ -586,8 +598,8 @@ def gmeet_setup():
             with open("token.json", "w") as token:
                 token.write(creds.to_json())
         return build("calendar", "v3", credentials=creds)
-
-    g.service = get_google_service()  # global used throughout the gmeet section
+    if not hasattr(g, 'service'):
+        g.service = get_google_service()  # global used throughout the gmeet section
 
 
 def gmeet_create():
@@ -672,11 +684,29 @@ def gmeet_remove():
 #
 
 @app.route('/gmail', methods=['GET'])
-def gmail():
+def gmail_setup():
     """
     Endpoint for Gmail.
     """
-    return "Gmail"
+    def get_gmail_service():
+        if hasattr(g, 'service'):
+            return
+        creds = None
+        if os.path.exists("token.json"):
+            creds = Credentials.from_authorized_user_file("token.json", GCAL_SCOPES)
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            else:
+                flow = InstalledAppFlow.from_client_secrets_file(
+                    "credentials.json", GCAL_SCOPES
+                )
+                creds = flow.run_local_server(port=8080)
+            with open("token.json", "w") as token:
+                token.write(creds.to_json())
+        return build("calendar", "v3", credentials=creds)
+    if not hasattr(g, 'gmail_service'):
+        g.gmail_service = get_gmail_service() # global specific to session
 
 
 # Creates a draft (not message to allow for updating before sending)
