@@ -20,6 +20,7 @@ flask-behind-proxy==0.1.1
 Flask-Migrate==4.0.7
 Flask-SocketIO==5.3.6
 Flask-SQLAlchemy==3.1.1
+Flask-WTF==1.2.1
 git-filter-repo==2.38.0
 google-api-core==2.19.1
 google-api-python-client==2.134.0
@@ -72,4 +73,5 @@ urllib3==1.26.7
 uuid==1.30
 Werkzeug==3.0.3
 wsproto==1.2.0
+WTForms==3.1.2
 zipp==3.19.2
