@@ -37,26 +37,16 @@ proxied = FlaskBehindProxy(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
 
 
+
 # Database setup
-
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
-app.config["SQLALCHEMY_ECHO"] = False
-db.init_app(app)
-with app.app_context():
-    db.create_all()
-
-
-db_filename = "plan-it.db"
-
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///%s" % db_filename
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///plan-it.db'
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-# Print SQLAlchemy INFO logs (True) Silence SQLAlchemy INFO logs (False)
 app.config["SQLALCHEMY_ECHO"] = False
-
+migrate = Migrate(app, db)
 db.init_app(app)
 with app.app_context():
     db.create_all()
+
 
 # ChatGPT API Setup
 client = OpenAI(
@@ -302,8 +292,7 @@ def gcal_create():
     # Add to database
     # Add to database
     new_event = Events(
-        id=1,
-        user_id=1,
+        user_id=session['user_id'],
         event_type="Create",
         title=insert_event_dict.get("summary"),
         description=insert_event_dict.get("description"),
@@ -385,8 +374,7 @@ def gcal_update():
 
     # Add to database
     new_event = Events(
-        id=1,
-        user_id=1,
+        user_id=session['user_id'],
         event_type="Update",
         title=updated_event_dict.get("summary"),
         description=updated_event_dict.get("description"),
@@ -447,8 +435,7 @@ def gcal_remove():
 
     # Add to database
     new_event = Events(
-        id=1,
-        user_id=1,
+        user_id=session['user_id'],
         event_type="Remove",
         title=deleted_event_dict.get("summary"),
         description=deleted_event_dict.get("description"),

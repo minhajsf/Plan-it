@@ -72,7 +72,6 @@ class Events(db.Model):
         """
         Initializes Event object.
         """
-        self.id = kwargs.get("id", "")
         self.user_id = kwargs.get("user_id", "")
         self.event_type = kwargs.get("event_type", "")
         self.title = kwargs.get("title", "")
@@ -135,7 +134,6 @@ class Meets(db.Model):
         """
         Initializes Meet object.
         """
-        self.id = kwargs.get("id", "")
         self.user_id = kwargs.get("user_id", "")
         self.meet_type = kwargs.get("meet_type", "")
         self.title = kwargs.get("title", "")
@@ -198,7 +196,6 @@ class Emails(db.Model):
         """
         Initializes Email object.
         """
-        self.id = kwargs.get("id", "")
         self.user_id = kwargs.get("user_id", "")
         self.email_type = kwargs.get("email_type", "")
         self.title = kwargs.get("title", "")
