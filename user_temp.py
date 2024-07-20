@@ -35,10 +35,14 @@ from flask_migrate import Migrate
 load_dotenv()
 
 
+
 app = Flask(__name__)
 proxied = FlaskBehindProxy(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+db.init_app(app)
+with app.app_context():
+    db.create_all()
 
 migrate = Migrate(app, db)
 
@@ -78,7 +82,7 @@ def login():
             return redirect(url_for('chat'))
         else:
             flash('Login Unsuccessful. Please check email and password', 'danger')
-            return redirect(url_for('login'))
+            return redirect(url_for('chat'))
     return render_template('login.html', title='Login', form=form)
 
 
@@ -114,4 +118,3 @@ def voice():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000, debug=True, ssl_context='adhoc')
-
