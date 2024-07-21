@@ -52,6 +52,10 @@
             transcript = transcript.replace(/\s([,.!?])/g, '$1');
             transcript = transcript.replace(/([.!?]\s)([a-z])/g, (match, p1, p2) => p1 + p2.toUpperCase());
             transcript = transcript.replace(/([.!?])([A-Z])/g, '$1 $2');
+            transcript = transcript.replace(/\bat\s([a-zA-Z0-9._%+-]+)\.([a-zA-Z]{2,})\b/g, '@$1.$2');
+
+            transcript = transcript.replace(/(\b[aA]\.[mM]\.|\b[pP]\.[mM]\.)(\s+[A-Z])/g, (match, p1, p2) => p1 + p2.toLowerCase());
+
             return transcript;
         };
 
