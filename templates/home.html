@@ -7,51 +7,72 @@
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/home.css')}}">
     <script src="../static/js/home.js" defer></script>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 </head>
-<style>
-    body {
-        background-image: radial-gradient(circle at 16% 83%, rgba(148, 148, 148,0.06) 0%, rgba(148, 148, 148,0.06) 50%,rgba(63, 63, 63,0.06) 50%, rgba(63, 63, 63,0.06) 100%),radial-gradient(circle at 68% 87%, rgba(66, 66, 66,0.06) 0%, rgba(66, 66, 66,0.06) 50%,rgba(105, 105, 105,0.06) 50%, rgba(105, 105, 105,0.06) 100%),radial-gradient(circle at 38% 50%, rgba(123, 123, 123,0.06) 0%, rgba(123, 123, 123,0.06) 50%,rgba(172, 172, 172,0.06) 50%, rgba(172, 172, 172,0.06) 100%),linear-gradient(90deg, hsl(18,0%,1%),hsl(18,0%,1%));
-        background-repeat: no-repeat;
-        background-size: cover;
-        margin: 0;
-        min-height: 100vh;
-    }
-</style>
 <body>
     <div class="content">
-        <nav class="navbar navbar-expand-lg black">
-            <h1>Plan-it</h1>
-            <div class="collapse navbar-collapse d-flex justify-content-end" id="navbarNav">
-                
+        <div class="gradient-bg" id = "home">
+            <nav class="navbar navbar-expand-lg black">
+                <h1>Plan-it</h1>
+                <div class="collapse navbar-collapse d-flex justify-content-end" id="navbarNav">
+                </div>
+            </nav>
+            <div class="hidden" id="intro-container">
+                <h1>Welcome to Plan-it</h1>
+                <p>Blast off into a new era of productivity with Plan-it. Leveraging the power of Google's API, effortlessly create events, send emails, and schedule meetings with stellar efficiency.</p>
+                <a href="{{url_for('login')}}" class="btn btn-primary">
+                    Get started
+                </a>
             </div>
-        </nav>
-        <div class = "hidden" id ="intro-container">
-            <h1>Welcome to Plan-it</h1>
-            <p>Blast off into a new era of productivity with Plan-it. Leveraging the power of Google's API, effortlessly create events, send emails, and schedule meetings with stellar efficiency.</p>
-            <a href="{{url_for('login')}}" class="btn btn-primary">
-                Get started
-            </a>
         </div>
-        <div class = "hidden" id ="info-container">
-            <div class ="descr hidden" >
-                <img src="../static/img/cal.png" alt="calendar">
-                <h2>Event Creation</h2>
-                <p>Create and manage events with ease, syncing seamlessly with your Google Calendar</p>
+        <div class="off-white-bg">
+            <div class = "hidden" id = "second-title">
+                <h1>What We Offer</h1>
             </div>
-            <div class ="descr hidden" >
-                <img src="../static/img/Mail.png" alt="email">
-                <h2>Email Integration</h2>
-                <p>Send emails directly from Plan-it, integrated with your Gmail account for a unified experience.</p>
-            </div>
-            <div class ="descr hidden" >
-                <img src="../static/img/Users.png" alt="meeting">
-                <h2>Meeting Scheduler</h2>
-                <p>Schedule and manage meetings efficiently, with automatic Google Meet link generation.</p>
+            <div class="hidden" id="info-container">
+                <div class="descr hidden">
+                    <div class = 'color-container'>
+                        <div class = 'img-container'>
+                            <div class = 'inner-container'>
+                                <img src="../static/img/cal.png" alt="calendar">
+                            </div>
+                        </div>
+                        <h2>Event Creation</h2>
+                        <p>Create and manage events with ease, syncing seamlessly with your Google Calendar</p>
+                    </div>
+                </div>
+                <div class="descr hidden">
+                    <div class = 'color-container'>
+                        <div class = 'img-container'>
+                            <img src="../static/img/Mail.png" alt="email">
+                        </div>
+                        <h2>Email Integration</h2>
+                        <p>Send emails directly from Plan-it, integrated with your Gmail account for a unified experience.</p>
+                    </div>
+                </div>
+                <div class="descr hidden">
+                    <div class = 'color-container'>
+                        <div class = 'img-container'>
+                            <img src="../static/img/Users.png" alt="meeting">
+                        </div>
+                        <h2>Meeting Scheduler</h2>
+                        <p>Schedule and manage meetings efficiently, with automatic Google Meet link generation.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    <hr>
-    <footer>Plan-it @ 2024. All rights reserved.</footer>
+    <div class="footer-nav">
+        <nav>
+            <ul>
+                <li><a href="#home">Home</a></li>
+                <li><a href="https://github.com/minhajsf/Plan-it" target="_blank">GitHub</a></li>
+            </ul>
+        </nav>
+        <hr>
+        <footer>Plan-it @ 2024. All rights reserved.</footer>
+    </div>
 </body>
 </html>
