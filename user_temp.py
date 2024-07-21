@@ -31,6 +31,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from flask import Flask, render_template, url_for, flash, redirect, request, session
 from flask_migrate import Migrate
+from flask_socketio import SocketIO, emit
 
 load_dotenv()
 
@@ -45,7 +46,13 @@ with app.app_context():
     db.create_all()
 
 migrate = Migrate(app, db)
+socketio = SocketIO(app)
 
+@socketio.on('user_prompt')
+def handle_user_prompt(prompt):
+    # Handle the user's prompt here
+    response = f"Received: {prompt}"
+    emit('server_response', response)
 @app.route('/')
 def root():
     return redirect(url_for('home'))
@@ -107,10 +114,15 @@ def home():
 @login_required
 def chat():
     return render_template('chat.html')
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    return render_template('dashboard.html')
     
 @app.route('/voice')
 def voice():
   return render_template('voice.html', title='Record')
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=True, ssl_context='adhoc')
+    socketio.run(app, host="0.0.0.0", port=8000, debug=True, ssl_context='adhoc')

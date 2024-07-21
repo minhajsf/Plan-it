@@ -1,44 +1,60 @@
 <!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" type="text/css" href="../static/css/chat.css">
-    <script src="../static/js/flash.js"></script>
+    <title>Voice-to-Text and Chat Webpage</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/chat.css')}}">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="../static/js/chat.js" defer></script>
 </head>
 <body>
-    <div id="chat"></div>
-    <input id="prompt" autocomplete="off">
-    <button onclick="sendPrompt()">Send</button>
-    <script>
-        const socket = io();
+    <nav class="navbar navbar-expand-lg black">
+        <h1>Plan-it</h1>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('home') }}">Home</a>
+                    
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+                </li>
+                
+            </ul>
+            <form class="form-inline">
+                {% if session.get('user_id') %}
+                    <a href="{{ url_for('logout') }}" class="btn">Logout</a>
+                {% endif %}
+            </form>
+        </div>
+    </nav>
+    <div class="chat-container">
+        <div class = "header">
+            <h1>Plan-it</h1>
+        </div>
+        <div class="chat-box" id="chatBox">
+            <!-- Chat messages will appear here -->
+        </div>
+        <div class="chat-input">
+            <input id="prompt" class="form-control" autocomplete="off" placeholder="Type a message">
+            <button onclick="sendPrompt()" class="btn btn-primary" style="background-color: transparent; border: none;">
+                <img src="{{ url_for('static', filename='img/Send.png')}}" alt="Send" style="width: 40px; height: 40px;">
+            </button>
+            <div class = "mic-and-indicator">
+                <div class="recording-indicator">
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                </div>
+                <img id="startButton" src="{{ url_for('static', filename='img/mic.png')}}" alt="Start Recording">
+                <img id="stopButton" src="{{ url_for('static', filename='img/mic.png')}}" alt="Stop Recording">
 
-        socket.on('connect', function() {
-            console.log('Connected to server');
-        });
-
-        socket.on('disconnect', function() {
-            console.log('Disconnected from server');
-        });
-
-        socket.on('server_response', function(response) {
-            console.log('Server:', response);
-        });
-
-        socket.on('redirect_to_app', function(data) {
-            window.location.href = data.url;
-        });
-
-        function sendPrompt() {
-            const prompt = document.getElementById('prompt').value.trim();
-            if (prompt !== '') {
-                socket.emit('user_prompt', prompt);
-                document.getElementById('prompt').value = '';
-            }
-        }
-
-        socket.on
-    </script>
-
+            </div>
+            <p id="outputText"></p>
+        </div>
+    </div>
 </body>
-</html
+</html>
+
