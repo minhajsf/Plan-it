@@ -4,20 +4,41 @@ html, body {
     padding: 0;
     min-height: 100vh;
 }
-body {
-
-    
-    
+.gradient-bg {
+    background-image: radial-gradient(circle at 16% 83%, rgba(148, 148, 148,0.06) 0%, rgba(148, 148, 148,0.06) 50%,rgba(63, 63, 63,0.06) 50%, rgba(63, 63, 63,0.06) 100%),
+                      radial-gradient(circle at 68% 87%, rgba(66, 66, 66,0.06) 0%, rgba(66, 66, 66,0.06) 50%,rgba(105, 105, 105,0.06) 50%, rgba(105, 105, 105,0.06) 100%),
+                      radial-gradient(circle at 38% 50%, rgba(123, 123, 123,0.06) 0%, rgba(123, 123, 123,0.06) 50%,rgba(172, 172, 172,0.06) 50%, rgba(172, 172, 172,0.06) 100%),
+                      linear-gradient(90deg, hsl(18,0%,1%),hsl(18,0%,1%));
+    background-repeat: no-repeat;
+    background-size: cover;
+    min-height: 50vh; /* Adjust this value if you want the gradient to cover more or less */
 }
 
-h1, h2, p, .navbar a, footer {
+.off-white-bg {
+    background-image: radial-gradient(circle at 16% 83%, rgba(107, 107, 107, 0.068) 0%, rgba(148, 148, 148,0.06) 50%,rgba(110, 110, 110, 0.089) 50%, rgba(177, 177, 177, 0.06) 100%),
+    radial-gradient(circle at 68% 87%, rgba(189, 189, 189, 0.06) 0%, rgba(66, 66, 66, 0.09) 50%,rgba(105, 105, 105, 0.11) 50%, rgba(100, 100, 100, 0.06) 100%),
+    radial-gradient(circle at 38% 50%, rgba(123, 123, 123,0.06) 0%, rgba(123, 123, 123,0.06) 50%,rgba(172, 172, 172,0.06) 50%, rgba(160, 160, 160, 0.06) 100%),
+    linear-gradient(90deg, hsl(0, 0%, 100%),hsl(0, 0%, 100%));
+    min-height: 50vh; 
+    padding: 20px; 
+}
+.gradient-bg h1, .gradient-bg h2, .gradient-bg p, .navbar a{
     color: white;
 }
+
+.off-white-bg h2, .off-white-bg  p {
+    color: black;
+}
+h1, h2, p, .navbar a, footer {
+    font-family: "Work Sans", sans-serif;
+}
+
 .content  {
     min-height: 100vh;
     justify-content: center;
     align-items:center;
     text-align: center;
+    position: relative;
 }
 
 .navbar h1 {
@@ -36,9 +57,12 @@ h1, h2, p, .navbar a, footer {
     font-size: 20px;
     
 }
-
+#second-title h1 {
+    font-size: 80px;
+    margin: 5% 0;
+}
 #intro-container {
-    min-height: 100vh;
+    min-height: 90vh;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -46,14 +70,17 @@ h1, h2, p, .navbar a, footer {
     text-align: center;
     transform: translateY(-20%);
 }
-#info-container h2 {
+#info-container h1 {
     font-size: 50px;
+}
+#info-container h2 {
+    font-size: 45px;
 }
 #info-container p {
     font-size: 20px;
 }
 #info-container {
-    height: 90vh;
+    height: 40vh;
     display: flex;
     /*transform: translateY(-50%);*/
     justify-content: center;;
@@ -61,7 +88,7 @@ h1, h2, p, .navbar a, footer {
     text-align: center;
     width: 90%;
     margin: auto;
-    gap: 15%;
+    gap: 5%;
 } 
 
 
@@ -78,7 +105,13 @@ h1, h2, p, .navbar a, footer {
     transform: translateX(-100%);
     transition: all 2s;
  }
-
+#second-title.hidden {
+    opacity: 0;
+    transition: all 2s;
+}
+#second-title.show {
+    opacity: 1;
+}
  #info-container.show{
     opacity: 1;
     filter: blur(0);
@@ -100,18 +133,63 @@ h1, h2, p, .navbar a, footer {
  .descr:nth-child(3) {
     transition-delay: 400ms;
  } 
+.color-container {
+    background-color: transparent;
+    border-radius: 10px;
+    padding: 20px;
+    margin: auto;
+    border: 1px solid black;
+    width: 300px;
+    height: 50%;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    display: flex;
+    backdrop-filter: blur(10px);
+}
+.img-container img {
+    width: 80%;
+    height: 100%;
+    padding: 5px;
+}
 
-
-img {
-    width: 120px;
-    height: 120px;
+.img-container {
+    border-radius: 50%;
+    background-color: hsl(0, 0%, 17%);
+    width: 40%;
+    padding: 10px;
+    align-items: center;
 }
 body hr {
-    border:0.5px solid white;
+    border: 0.5px solid white;
     margin: 20px 0;
 }
-footer {
-    font-size: 15px;
+.footer-nav {
+    background-color: #e6e6e6; 
+    padding: 30px;
     text-align: center;
+    font-family: "Work Sans", sans-serif;
+    font-size: 15px;
+    border-top: 1px solid rgb(190, 190, 190);
 }
+
+.footer-nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.footer-nav ul li {
+    display: inline;
+}
+.footer-nav hr {
+    border: 0; 
+    height: 1px; 
+    background-color: rgb(190, 190, 190);
+    margin: 15px 0;
+}
+
 
