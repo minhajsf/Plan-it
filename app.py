@@ -58,6 +58,8 @@ GCAL_SCOPES = ['https://www.googleapis.com/auth/calendar',
 
 GMEET_SCOPES = ['https://www.googleapis.com/auth/meetings.space.created']
 
+GMAIL_SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
+
 @app.route('/')
 def index():
     print("'index' route hit", file=sys.stderr)
@@ -588,13 +590,13 @@ def gmeet_setup():
             return
         creds = None
         if os.path.exists("token.json"):
-            creds = Credentials.from_authorized_user_file("token.json", GCAL_SCOPES)
+            creds = Credentials.from_authorized_user_file("token.json", GMEET_SCOPES)
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(
-                    "credentials.json", GCAL_SCOPES
+                    "credentials.json", GMEET_SCOPES
                 )
                 creds = flow.run_local_server(port=8080)
             with open("token.json", "w") as token:
@@ -781,13 +783,13 @@ def gmail_setup():
             return
         creds = None
         if os.path.exists("token.json"):
-            creds = Credentials.from_authorized_user_file("token.json", GCAL_SCOPES)
+            creds = Credentials.from_authorized_user_file("token.json", GMAIL_SCOPES)
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(
-                    "credentials.json", GCAL_SCOPES
+                    "credentials.json", GMAIL_SCOPES
                 )
                 creds = flow.run_local_server(port=8080)
             with open("token.json", "w") as token:
