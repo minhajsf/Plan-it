@@ -1,12 +1,135 @@
 <!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
     <link rel="stylesheet" type="text/css" href="../static/css/dashboard.css">
     <script src="../static/js/flash.js"></script>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
 <body>
-
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    <nav class="navbar navbar-expand-lg ">
+        <h1>Plan-it</h1>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('home') }}">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('chat') }}">Chat</a>
+                </li>
+            </ul>
+            <form class="form-inline">
+                {% if session.get('user_id') %}
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-light">Logout</a>
+                {% endif %}
+            </form>
+        </div>
+    </nav>
+    <div class="container">
+        <div class = "header">
+            <h1>Dashboard</h1>
+            <div class="icons">
+                <button data-setting-target="#help" class="icon-button">
+                    <img src="{{url_for('static', filename='img/Help circle.png')}}" alt="Help" class="icon">
+                </button>
+                <div class="popup help" id="help">
+                    <div class="popup-header">Help
+                        <button data-close-button class="close-button">&times;</button>
+                    </div>
+                    <hr>
+                    <div class="popup-body">
+                        <p>need help? skill issue</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="overlay"></div>
+        <div class="section">
+            <div class = "section-header"><h2>Upcoming Events</h2></div>
+            <div class="card-container">
+                {% for i in range(5) %}
+                <div class="card">
+                    <div class="card-title">Event Title {{ i + 1 }}</div>
+                    <div class="card-details">Date: 2024-07-{{ i + 1 }}</div>
+                    <div class="card-details">Location: Location {{ i + 1 }}</div>
+                    <div class="card-details">Time: {{ 10 + i }}:00</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="section" id = "meetings-section">
+            <div class = "section-header"><h2>Upcoming Meetings</h2></div>
+            <div class="card-container">
+                {% for i in range(5) %}
+                <div class="card">
+                    <div class="card-title">Meeting Title {{ i + 1 }}</div>
+                    <div class="card-details">Date: 2024-07-{{ i + 6 }}</div>
+                    <div class="card-details">Time: {{ 14 + i }}:00</div>
+                    <div class="card-details">Link: <a href="https://example.com" target="_blank">Join</a></div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="section" id = "saved-section">
+            <div class = "section-header"><h2>Saved Drafts</h2></div>
+            <div class="card-container">
+                {% for i in range(5) %}
+                <div class="card">
+                    <div class="card-title">Draft Title {{ i + 1 }}</div>
+                    <div class="card-details">Date: 2024-07-{{ i + 11 }}</div>
+                    <div class="card-details">Content: This is a draft content snippet...</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
 </body>
-</html
+<script>
+    const openButtons = document.querySelectorAll("[data-setting-target]");
+    const closeButtons = document.querySelectorAll("[data-close-button]");
+    const overlay = document.getElementById("overlay");
+
+    document.addEventListener('DOMContentLoaded', () => {;
+    openButtons.forEach(button => {
+        button.addEventListener("click", () => {
+            const modal = document.querySelector(button.dataset.settingTarget);
+            openModal(modal);
+        });
+    });
+
+    closeButtons.forEach(button => {
+        button.addEventListener("click", () => {
+            const modal = button.closest(".popup");
+            closeModal(modal);
+        });
+    });
+
+    overlay.addEventListener("click", () => {
+        const modals = document.querySelectorAll(".popup.active");
+        modals.forEach(modal => closeModal(modal));
+    });
+
+    function openModal(modal) {
+        if (modal == null) return;
+        modal.classList.add("active");
+        overlay.classList.add("active");
+    }
+
+    function closeModal(modal) {
+        if (modal == null) return;
+        modal.classList.remove("active");
+        overlay.classList.remove("active");
+    }
+
+});
+</script>
+</html>

@@ -59,8 +59,6 @@ class Events(db.Model):
     __tablename__ = "Events"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer)
-
-    event_type = db.Column(db.String, nullable=False)
     title = db.Column(db.String, nullable=False)
     description = db.Column(db.String, nullable=False)
     start = db.Column(db.String, nullable=False)
@@ -73,7 +71,6 @@ class Events(db.Model):
         Initializes Event object.
         """
         self.user_id = kwargs.get("user_id", "")
-        self.event_type = kwargs.get("event_type", "")
         self.title = kwargs.get("title", "")
         self.description = kwargs.get("description", "")
         self.start = kwargs.get("start", "")
@@ -88,7 +85,6 @@ class Events(db.Model):
         return {
             "id": self.id,
             "user_id": self.user_id,
-            "event_type": self.event_type,
             "title": self.title,
             "description": self.description,
             "start": self.start,
@@ -104,7 +100,6 @@ class Events(db.Model):
         return {
             "id": self.id,
             "user_id": self.user_id,
-            "event_type": self.event_type,
             "title": self.title,
             "description": self.description,
             "start": self.start,
@@ -121,8 +116,6 @@ class Meets(db.Model):
     __tablename__ = "Meets"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, autoincrement=True)
-
-    meet_type = db.Column(db.String, nullable=False)
     summary = db.Column(db.String, nullable=False)
     description = db.Column(db.String, nullable=False)
     start = db.Column(db.String, nullable=False)
@@ -136,7 +129,6 @@ class Meets(db.Model):
         Initializes Meet object.
         """
         self.user_id = kwargs.get("user_id", "")
-        self.meet_type = kwargs.get("meet_type", "")
         self.summary = kwargs.get("summary", "")
         self.description = kwargs.get("description", "")
         self.start = kwargs.get("start", "")
@@ -152,7 +144,6 @@ class Meets(db.Model):
         return {
             "id": self.id,
             "user_id": self.user_id,
-            "meet_type": self.meet_type,
             "summary": self.summary,
             "description": self.description,
             "start": self.start,
@@ -169,7 +160,6 @@ class Meets(db.Model):
         return {
             "id": self.id,
             "user_id": self.user_id,
-            "meet_type": self.meet_type,
             "summary": self.summary,
             "description": self.description,
             "start": self.start,
@@ -186,11 +176,10 @@ class Emails(db.Model):
     __tablename__ = "Emails"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, autoincrement=True)
-    email_type = db.Column(db.String, nullable=True)
     subject = db.Column(db.String, nullable=False)
     body = db.Column(db.String, nullable=False)
+    cc = db.Column(db.String, nullable=False)
     to = db.Column(db.String, nullable=False)
-    sender = db.Column(db.String, nullable=False)
     email_id = db.Column(db.String, nullable=False)
     email_dictionary = db.Column(db.String, nullable=False)
 
@@ -199,7 +188,6 @@ class Emails(db.Model):
         Initializes Email object.
         """
         self.user_id = kwargs.get("user_id", "")
-        self.email_type = kwargs.get("email_type", "")
         self.subject = kwargs.get("subject", "")
         self.body = kwargs.get("body", "")
         self.to = kwargs.get("to", "")
@@ -215,7 +203,6 @@ class Emails(db.Model):
         return {
             "id": self.id,
             "user_id": self.user_id,
-            "email_type": self.email_type,
             "subject": self.subject,
             "body": self.body,
             "to": self.to,
@@ -231,7 +218,6 @@ class Emails(db.Model):
         return {
             "id": self.id,
             "user_id": self.user_id,
-            "email_type": self.email_type,
             "subject": self.subject,
             "body": self.body,
             "to": self.to,
