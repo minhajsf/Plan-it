@@ -37,7 +37,6 @@ proxied = FlaskBehindProxy(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
 
 
-
 # Database setup
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///plan-it.db'
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -54,28 +53,30 @@ client = OpenAI(
 )
 
 SCOPES = ['https://www.googleapis.com/auth/calendar',
-               'https://www.googleapis.com/auth/calendar.events',
-               'https://www.googleapis.com/auth/meetings.space.created',
-               'https://www.googleapis.com/auth/gmail.modify']
+          'https://www.googleapis.com/auth/calendar.events',
+          'https://www.googleapis.com/auth/meetings.space.created',
+          'https://www.googleapis.com/auth/gmail.modify']
+
 
 @app.route('/')
 def root():
     return redirect(url_for('home'))
 
+
 @app.route("/register", methods=['GET', 'POST'])
 def register():
     form = RegistrationForm()
-    if form.validate_on_submit():  
+    if form.validate_on_submit():
         existing_user = Users.query.filter_by(email=form.email.data).first()
         if existing_user:
             flash('Email already taken. Please use a different email.', 'danger')
             return redirect(url_for('register'))
-        user = Users(name = form.full_name.data, email=form.email.data)
+        user = Users(name=form.full_name.data, email=form.email.data)
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
         flash(f'Account created for {form.email.data}!', 'success')
-        return redirect(url_for('login'))  
+        return redirect(url_for('login'))
     return render_template('register.html', title='Register', form=form)
 
 
@@ -112,23 +113,27 @@ def login_required(f):
 
     return decorated_function
 
+
 @app.route('/home')
 def home():
     return render_template('home.html')
+
 
 @app.route('/chat')
 @login_required
 def chat():
     return render_template('chat.html')
 
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
     return render_template('dashboard.html')
-    
+
+
 @app.route('/voice')
 def voice():
-  return render_template('voice.html', title='Record')
+    return render_template('voice.html', title='Record')
 
 
 @socketio.on('connect')
@@ -180,7 +185,6 @@ def google_setup():
         creds = get_user_token(user_id)
         print("2", file=sys.stderr)
 
-
         if not creds or not creds.valid:
             print("3", file=sys.stderr)
             if creds and creds.expired and creds.refresh_token:
@@ -203,7 +207,8 @@ def google_setup():
         return build("calendar", "v3", credentials=creds)
     if not hasattr(g, 'service'):
         print("0", file=sys.stderr)
-        g.service = get_google_service()  # global used throughout gcal, gmeet, and/or gmail
+        # global used throughout gcal, gmeet, and/or gmail
+        g.service = get_google_service()
 
 
 def determine_query_type(message: str):
@@ -229,7 +234,8 @@ def determine_query_type(message: str):
         response = completion.choices[0].message.content
 
         # Ensure the response is a JSON string
-        response = response[response.index("{"):len(response) - response[::-1].index("}")]
+        response = response[response.index(
+            "{"):len(response) - response[::-1].index("}")]
         # Fixes the capitalization of True in the response
         response = re.sub(r"\btrue\b", "True", response)
         # Extract and parse the response
@@ -291,6 +297,7 @@ def extract_keywords(prompt):
     keywords = [keyword.strip() for keyword in response.split(',')]
     return keywords
 
+
 def find_event_id(prompt, list):
     completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -303,6 +310,7 @@ def find_event_id(prompt, list):
     )
     event_id = completion.choices[0].message.content
     return event_id
+
 
 def find_meeting_id(prompt, list):
     completion = client.chat.completions.create(
@@ -317,6 +325,7 @@ def find_meeting_id(prompt, list):
     meeting_id = completion.choices[0].message.content
     return meeting_id
 
+
 def find_email_id(prompt, list):
     completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -329,6 +338,7 @@ def find_email_id(prompt, list):
     )
     email_id = completion.choices[0].message.content
     return email_id
+
 
 @socketio.on('user_prompt')
 def handle_user_prompt(prompt):
@@ -354,11 +364,12 @@ def handle_user_prompt(prompt):
         print(f"Event Type: {event_type}, Mode: {mode}")
         success_message = eval(f"{event_type}_{mode}()")
         return success_message
-    
+
     except Exception as e:
         failure_message = """Please try again. The program only works for GCal -> (Create, Update, and Remove),
               GMeet -> (Create, Update, or Remove), or Gmail -> (Create, Update, Send, and Delete)"""
-        print("Exception thrown in handle_user_prompt at bottom try-catch", file=sys.stderr)
+        print("Exception thrown in handle_user_prompt at bottom try-catch",
+              file=sys.stderr)
         print(f"Error: {e}", file=sys.stderr)
         return failure_message
 
@@ -400,9 +411,12 @@ def format_system_instructions_for_event(query_type_dict: dict, content_dict: di
     current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
     summary = content_dict.get('summary') if content_dict else '<summary_here>'
-    description = content_dict.get('description') if content_dict else '<extra specifications, locations, and descriptions here>'
-    start = content_dict.get('start') if content_dict else f'start time default {current_datetime}-04:00'
-    end = content_dict.get('end') if content_dict else f'end time default {current_datetime}-04:00'
+    description = content_dict.get(
+        'description') if content_dict else '<extra specifications, locations, and descriptions here>'
+    start = content_dict.get(
+        'start') if content_dict else f'start time default {current_datetime}-04:00'
+    end = content_dict.get(
+        'end') if content_dict else f'end time default {current_datetime}-04:00'
 
     format_instruction = f"""
     You are an assistant that {query_type_dict.get('mode')}s a Google Calendar event using a sample JSON..
@@ -438,12 +452,12 @@ def gcal_create():
 
     # GPT instructions
     format_instruction = format_system_instructions_for_event(prompt_dict)
-    
+
     # GPT response as JSON
     event_data = gpt_format_json(format_instruction, prompt_dict['prompt'])
 
     event = create_event(g.service, event_data)
-    
+
     new_event = Events(
         user_id=session['user_id'],
         title=event_data.get("summary"),
@@ -471,19 +485,20 @@ def gcal_update():
     user_prompt = session['prompt_dictionary']['prompt']
     user_id = session['user_id']
 
-    #Find keywords from prompt
+    # Find keywords from prompt
     keywords = extract_keywords(user_prompt)
     print(keywords)
 
-    #Limit search to user
+    # Limit search to user
     events = Events.query.filter_by(user_id=user_id).all()
     print(Events.query.filter_by(user_id=user_id).first().event_id)
     if not events:
         print("Events not found in db. Try again?")
         return
-    
+
     # Filter events then send to API to find id
-    filtered_events = [[{"event_id": event.event_id}, event.event_dictionary] for event in events if any(keyword.lower() in event.title.lower() or keyword.lower() in event.description.lower() for keyword in keywords)]
+    filtered_events = [[{"event_id": event.event_id}, event.event_dictionary] for event in events if any(
+        keyword.lower() in event.title.lower() or keyword.lower() in event.description.lower() for keyword in keywords)]
     print(filtered_events)
 
     if not filtered_events:
@@ -496,8 +511,9 @@ def gcal_update():
         print("Not enough information, please try again?")
         return
     # query event from database
-    #event = Events.query.filter_by(title=prompt_dict.get('title')).first()
-    event = Events.query.filter_by(event_id=event_id[1:len(event_id)-1]).first()
+    # event = Events.query.filter_by(title=prompt_dict.get('title')).first()
+    event = Events.query.filter_by(
+        event_id=event_id[1:len(event_id)-1]).first()
     print(event)
 
     # if not found in db
@@ -510,8 +526,9 @@ def gcal_update():
     event_id = event.event_id
 
     # GPT instructions
-    format_instruction = format_system_instructions_for_event(prompt_dict, event_content)
-  
+    format_instruction = format_system_instructions_for_event(
+        prompt_dict, event_content)
+
     # GPT response as JSON
     event_data = gpt_format_json(format_instruction, prompt_dict.get('prompt'))
 
@@ -541,19 +558,20 @@ def gcal_remove():
     user_prompt = session['prompt_dictionary']['prompt']
     user_id = session['user_id']
 
-    #Find keywords from prompt
+    # Find keywords from prompt
     keywords = extract_keywords(user_prompt)
     print(keywords)
 
-    #Limit search to user
+    # Limit search to user
     events = Events.query.filter_by(user_id=user_id).all()
     print(Events.query.filter_by(user_id=user_id).first().event_id)
     if not events:
         print("Events not found in db. Try again?")
         return
-    
+
     # Filter events then send to API to find id
-    filtered_events = [[{"event_id": event.event_id}, event.event_dictionary] for event in events if any(keyword.lower() in event.title.lower() or keyword.lower() in event.description.lower() for keyword in keywords)]
+    filtered_events = [[{"event_id": event.event_id}, event.event_dictionary] for event in events if any(
+        keyword.lower() in event.title.lower() or keyword.lower() in event.description.lower() for keyword in keywords)]
     print(filtered_events)
 
     if not filtered_events:
@@ -566,8 +584,9 @@ def gcal_remove():
         print("Not enough information, please try again?")
         return
     # query event from database
-    #event = Events.query.filter_by(title=prompt_dict.get('title')).first()
-    event = Events.query.filter_by(event_id=event_id[1:len(event_id)-1]).first()
+    # event = Events.query.filter_by(title=prompt_dict.get('title')).first()
+    event = Events.query.filter_by(
+        event_id=event_id[1:len(event_id)-1]).first()
     print(event)
 
     # remove it from calendar
@@ -633,8 +652,10 @@ def format_system_instructions_for_meeting(query_type_dict: dict, content_dict: 
     summary = content_dict.get('summary') if content_dict else '<summary_here>'
     description = content_dict.get(
         'description') if content_dict else 'extra specifications, locations, and descriptions'
-    start = content_dict.get('start') if content_dict else 'start time example format <2015-05-28T09:00:00-07:00>'
-    end = content_dict.get('end') if content_dict else 'end time example format <2015-05-28T17:00:00-07:00>'
+    start = content_dict.get(
+        'start') if content_dict else 'start time example format <2015-05-28T09:00:00-07:00>'
+    end = content_dict.get(
+        'end') if content_dict else 'end time example format <2015-05-28T17:00:00-07:00>'
     attendees = content_dict.get('attendees',
                                  []) if content_dict else []  # List of attendees or an empty list if not provided
 
@@ -701,7 +722,8 @@ def gmeet_create():
     db.session.add(new_meeting)
     db.session.commit()
     print("Meeting has been created successfully.")
-    socketio.emit('meeting_created', {'message': 'Meeting created successfully'})
+    socketio.emit('meeting_created', {
+                  'message': 'Meeting created successfully'})
 
 
 def gmeet_update():
@@ -709,19 +731,20 @@ def gmeet_update():
     user_prompt = session['prompt_dictionary']['prompt']
     user_id = session['user_id']
 
-    #Find keywords from prompt
+    # Find keywords from prompt
     keywords = extract_keywords(user_prompt)
     print(keywords)
 
-    #Limit search to user
+    # Limit search to user
     meetings = Meets.query.filter_by(user_id=user_id).all()
     print(Meets.query.filter_by(user_id=user_id).first().meet_id)
     if not meetings:
         print("Meetings not found in db. Try again?")
         return
-    
+
     # Filter events then send to API to find id
-    filtered_meetings = [[{"meet_id": meeting.meet_id}, meeting.meet_dictionary] for meeting in meetings if any(keyword.lower() in meeting.summary.lower() or keyword.lower() in meeting.description.lower() for keyword in keywords)]
+    filtered_meetings = [[{"meet_id": meeting.meet_id}, meeting.meet_dictionary] for meeting in meetings if any(
+        keyword.lower() in meeting.summary.lower() or keyword.lower() in meeting.description.lower() for keyword in keywords)]
     print(filtered_meetings)
 
     if not filtered_meetings:
@@ -734,7 +757,7 @@ def gmeet_update():
         print("Not enough information, please try again?")
         return
     # query event from database
-    #event = Events.query.filter_by(title=prompt_dict.get('title')).first()
+    # event = Events.query.filter_by(title=prompt_dict.get('title')).first()
     meeting = Meets.query.filter_by(meet_id=meet_id.replace('\'', '')).first()
     print(meeting)
 
@@ -751,7 +774,8 @@ def gmeet_update():
     meeting_id = meeting.meet_id
 
     # instructions if either update or create
-    instructions = format_system_instructions_for_meeting(prompt_dict, meeting_content)
+    instructions = format_system_instructions_for_meeting(
+        prompt_dict, meeting_content)
 
     # formatted response from gpt --> can be passed directly into create or remove
     # CHECKOUT (why 'title' instead of 'prompt')
@@ -770,26 +794,28 @@ def gmeet_update():
 
     db.session.commit()
     print("Meeting updated successfully.")
-    socketio.emit('meeting_update', {'message': 'Meeting updated successfully'})
+    socketio.emit('meeting_update', {
+                  'message': 'Meeting updated successfully'})
 
 
 def gmeet_remove():
     user_prompt = session['prompt_dictionary']['prompt']
     user_id = session['user_id']
 
-    #Find keywords from prompt
+    # Find keywords from prompt
     keywords = extract_keywords(user_prompt)
     print(keywords)
 
-    #Limit search to user
+    # Limit search to user
     meetings = Meets.query.filter_by(user_id=user_id).all()
     print(Meets.query.filter_by(user_id=user_id).first().meet_id)
     if not meetings:
         print("Meetings not found in db. Try again?")
         return
-    
+
     # Filter events then send to API to find id
-    filtered_meetings = [[{"meet_id": meeting.meet_id}, meeting.meet_dictionary] for meeting in meetings if any(keyword.lower() in meeting.summary.lower() or keyword.lower() in meeting.description.lower() for keyword in keywords)]
+    filtered_meetings = [[{"meet_id": meeting.meet_id}, meeting.meet_dictionary] for meeting in meetings if any(
+        keyword.lower() in meeting.summary.lower() or keyword.lower() in meeting.description.lower() for keyword in keywords)]
     print(filtered_meetings)
 
     if not filtered_meetings:
@@ -802,8 +828,9 @@ def gmeet_remove():
         print("Not enough information, please try again?")
         return
     # query event from database
-    #event = Events.query.filter_by(title=prompt_dict.get('title')).first()
-    meeting_to_remove = Meets.query.filter_by(meet_id=meet_id.replace('\'', '')).first()
+    # event = Events.query.filter_by(title=prompt_dict.get('title')).first()
+    meeting_to_remove = Meets.query.filter_by(
+        meet_id=meet_id.replace('\'', '')).first()
     print(meeting_to_remove)
 
     # remove it from calendar
@@ -819,6 +846,8 @@ def gmeet_remove():
 # GMAIL ROUTES
 # -----------------------------------------------------------------------
 #
+
+
 def get_authenticated_user_email(service):
     try:
         profile = service.users().getProfile(userId='me').execute()
@@ -846,9 +875,11 @@ Content-Type: text/plain; charset="UTF-8"
 
 def format_system_instructions_for_gmail(query_type_dict: dict, content_dict: dict = None) -> str:
     recipient = content_dict.get('to') if content_dict else '<recipient_email>'
-    subject = content_dict.get('subject') if content_dict else '<email_subject>'
+    subject = content_dict.get(
+        'subject') if content_dict else '<email_subject>'
     body = content_dict.get('body') if content_dict else '<email_body>'
-    sender = content_dict.get('from', 'noreply@example.com') if content_dict else 'noreply@example.com'
+    sender = content_dict.get(
+        'from', 'noreply@example.com') if content_dict else 'noreply@example.com'
     cc = content_dict.get('cc', []) if content_dict else []
 
     instructions = f"""
@@ -882,10 +913,26 @@ def create_gmail_draft(service, message_body_raw):
         return None
 
 
+
+def update_gmail_draft(service, draft_id, updated_message_body_raw):
+    try:
+        message = {
+            'message': {
+                'raw': base64.urlsafe_b64encode(updated_message_body_raw.encode('utf-8')).decode('utf-8')
+            }
+        }
+        draft = service.users().drafts().update(
+            userId='me', id=draft_id, body=message).execute()
+        return draft
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
+
 def send_gmail_draft(service, draft_id):
     try:
         # draft =
-        service.users().drafts().send(userId='me', body={'id': draft_id}).execute()
+        service.users().drafts().send(
+            userId='me', body={'id': draft_id}).execute()
         print("Draft sent successfully")
         # return draft
     except Exception as e:
@@ -901,7 +948,7 @@ def delete_gmail_draft(service, draft_id):
         print(f"An error occurred: {e}")
 
 
-@socketio('approval-request-response')
+# @socketio('approval-request-response')
 def handle_approval_response(response):
     status = response.get('status')
     email_json = response.get('email')
@@ -937,7 +984,8 @@ def gmail_create():
     prompt = prompt_dict.get('prompt')
 
     content_dict = {'from': f"{get_authenticated_user_email(g.service)}"}
-    instructions = format_system_instructions_for_gmail(prompt_dict, content_dict)
+    instructions = format_system_instructions_for_gmail(
+        prompt_dict, content_dict)
 
     created_email_json = gpt_format_json(instructions, prompt)
 
@@ -947,8 +995,39 @@ def gmail_create():
 # Sends a draft
 def gmail_send():
     # title is key of subject in determine_query_type
-    subject_of_email = session['prompt_dictionary']['title']
-    email_to_send = Emails.query.filter_by(subject=subject_of_email).first()
+    user_prompt = session['prompt_dictionary']['prompt']
+    user_id = session['user_id']
+
+    # Find keywords from prompt
+    keywords = extract_keywords(user_prompt)
+    print(keywords)
+
+    # Limit search to user
+    emails = Emails.query.filter_by(user_id=user_id).all()
+    print(Emails.query.filter_by(user_id=user_id).first().email_id)
+    if not emails:
+        print("Emails not found in db. Try again?")
+        return
+
+    # Filter events then send to API to find id
+    filtered_emails = [[{"meet_id": email.email_id}, email.email_dictionary] for email in emails if any(
+        keyword.lower() in email.summary.lower() or keyword.lower() in email.description.lower() for keyword in keywords)]
+    print(filtered_emails)
+
+    if not filtered_emails:
+        print("No emails found matching the provided keywords.", file=sys.stderr)
+        return "No matching emails found."
+
+    email_id = find_email_id(user_prompt, filtered_emails)
+    print(email_id)
+    if email_id == 'invalid':
+        print("Not enough information, please try again?")
+        return
+    # query event from database
+    # event = Events.query.filter_by(title=prompt_dict.get('title')).first()
+    email_to_send = Emails.query.filter_by(
+        email_id=email_id.replace('\'', '')).first()
+    print(email_to_send)
 
     if email_to_send:
         send_gmail_draft(g.service, email_to_send.email_id)
@@ -959,9 +1038,39 @@ def gmail_send():
 
 
 def gmail_delete():
-    prompt_dict = session.get('prompt_dictionary')
-    subject_of_draft = prompt_dict.get('title')
-    draft_to_delete = Emails.query.filter_by(subject=subject_of_draft).first()
+    user_prompt = session['prompt_dictionary']['prompt']
+    user_id = session['user_id']
+
+    # Find keywords from prompt
+    keywords = extract_keywords(user_prompt)
+    print(keywords)
+
+    # Limit search to user
+    emails = Emails.query.filter_by(user_id=user_id).all()
+    print(Emails.query.filter_by(user_id=user_id).first().email_id)
+    if not emails:
+        print("Emails not found in db. Try again?")
+        return
+
+    # Filter events then send to API to find id
+    filtered_emails = [[{"meet_id": email.email_id}, email.email_dictionary] for email in emails if any(
+        keyword.lower() in email.summary.lower() or keyword.lower() in email.description.lower() for keyword in keywords)]
+    print(filtered_emails)
+
+    if not filtered_emails:
+        print("No emails found matching the provided keywords.", file=sys.stderr)
+        return "No matching emails found."
+
+    email_id = find_email_id(user_prompt, filtered_emails)
+    print(email_id)
+    if email_id == 'invalid':
+        print("Not enough information, please try again?")
+        return
+    # query event from database
+    # event = Events.query.filter_by(title=prompt_dict.get('title')).first()
+    draft_to_delete = Emails.query.filter_by(
+        email_id=email_id.replace('\'', '')).first()
+    print(draft_to_delete)
     if draft_to_delete:
         # delete from our db
         draft_id = draft_to_delete.email_id
