@@ -692,7 +692,7 @@ def get_authenticated_user_email(service):
 
 def email_json_to_raw(email_json):
     from_field = email_json['from']  # Assuming `from_list` has a single email
-    to_field = email_json['to']
+    to_field = email_json['to']  # Fixed here, if not changed to single, will not work
     cc_field = ', '.join(email_json['cc']) if email_json['cc'] else ''
 
     raw_email = f"""From: {from_field}
