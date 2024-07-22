@@ -13,6 +13,7 @@ class Users(db.Model):
     __tablename__ = "users"
 
     user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(60), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(60), nullable=False)
 
@@ -29,6 +30,7 @@ class Users(db.Model):
         """
         Inititalizes a User object.
         """
+        self.name = kwargs.get("name", "")
         self.email = kwargs.get("email", "")
 
     def serialize(self):
@@ -38,6 +40,7 @@ class Users(db.Model):
 
         return{
             "user_id": self.user_id,
+            "name": self.name,
             "email": self.email,
         }
 
