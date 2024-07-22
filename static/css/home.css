@@ -11,7 +11,8 @@ html, body {
                       linear-gradient(90deg, hsl(18,0%,1%),hsl(18,0%,1%));
     background-repeat: no-repeat;
     background-size: cover;
-    min-height: 50vh; /* Adjust this value if you want the gradient to cover more or less */
+    min-height: 50vh; 
+    position: relative;
 }
 
 .off-white-bg {
@@ -48,6 +49,8 @@ h1, h2, p, .navbar a, footer {
 
 .btn {
     pointer-events: auto;
+    width: 140px;
+    height: 40px;
 }
 #intro-container h1{
     font-size: 120px;
@@ -69,6 +72,11 @@ h1, h2, p, .navbar a, footer {
     align-items: center;
     text-align: center;
     transform: translateY(-20%);
+}
+#arrow {
+    position: absolute;
+    bottom: 50px;
+
 }
 #info-container h1 {
     font-size: 50px;
@@ -121,6 +129,7 @@ h1, h2, p, .navbar a, footer {
     transition: all 2s;
     opacity: 0;
     transform: translateX(100%);
+    height: 90%;
 }
 
 .descr.show {
@@ -140,7 +149,7 @@ h1, h2, p, .navbar a, footer {
     margin: auto;
     border: 1px solid black;
     width: 300px;
-    height: 50%;
+
     align-items: center;
     justify-content: center;
     flex-direction: column;
@@ -148,7 +157,7 @@ h1, h2, p, .navbar a, footer {
     backdrop-filter: blur(10px);
 }
 .img-container img {
-    width: 80%;
+    width: 100%;
     height: 100%;
     padding: 5px;
 }
@@ -156,7 +165,7 @@ h1, h2, p, .navbar a, footer {
 .img-container {
     border-radius: 50%;
     background-color: hsl(0, 0%, 17%);
-    width: 40%;
+    width: 35%;
     padding: 10px;
     align-items: center;
 }
@@ -166,7 +175,7 @@ body hr {
 }
 .footer-nav {
     background-color: #e6e6e6; 
-    padding: 30px;
+    padding: 20px;
     text-align: center;
     font-family: "Work Sans", sans-serif;
     font-size: 15px;
@@ -184,6 +193,11 @@ body hr {
 
 .footer-nav ul li {
     display: inline;
+}
+.footer-nav footer {
+    margin-top: 20px;
+    font-size: 15px;
+
 }
 .footer-nav hr {
     border: 0; 

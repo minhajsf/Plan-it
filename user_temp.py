@@ -85,13 +85,14 @@ def login():
             return redirect(url_for('chat'))
         else:
             flash('Login Unsuccessful. Please check email and password', 'danger')
-            return redirect(url_for('chat'))
+            return redirect(url_for('login'))
     return render_template('login.html', title='Login', form=form)
 
 
 @app.route("/logout")
 def logout():
     session.pop('user_id', None)
+    print("User ID after logout:", session.get('user_id'))
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
 
