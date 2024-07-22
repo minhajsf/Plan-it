@@ -78,6 +78,23 @@ def handle_disconnect():
     leave_room(session['socket_id'])  # Leave room when client disconnects
     session.clear()
 
+
+# Get user's token.json from db record. Return None if none exists
+def get_user_token(uid):
+    user = Users.query.filter_by(user_id=uid).first()
+    if user and user.token:
+        return Credentials.from_authorized_user_info(user.token)
+    return None
+
+
+# Save user's token.json to db record
+def save_user_token(uid, creds):
+    user = Users.query.filter_by(user_id=uid).first()
+    if user:
+        user.token = creds.to_json()
+        db.session.commit()
+
+
 def google_setup():
     """
     Google Auth & Service.
@@ -85,25 +102,21 @@ def google_setup():
     def get_google_service():
         if hasattr(g, 'service'):
             return
-        creds = None
 
-        # # get current user's id
-        # user_id = session.get('user_id')
+        user_id = session['user_id']  # Mock user
+        creds = get_user_token(user_id)
 
-        # token = Users.query.filter_by(id=user_id).first().token
-
-        if os.path.exists("token.json"):
-            creds = Credentials.from_authorized_user_file("token.json", SCOPES)
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
+                save_user_token(user_id, creds)
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(
                     "credentials.json", SCOPES
                 )
                 creds = flow.run_local_server(port=8080)
-            with open("token.json", "w") as token:
-                token.write(creds.to_json())
+                save_user_token(user_id, creds)
+
         return build("calendar", "v3", credentials=creds)
     if not hasattr(g, 'service'):
         g.service = get_google_service()  # global used throughout gcal, gmeet, and/or gmail
@@ -191,47 +204,55 @@ def handle_user_prompt(prompt):
     mode = prompt_dictionary['mode'].lower()
 
     # TRY eval(f"{event_type}_{mode}()")
+    try:
+        google_setup()
+        eval(f"{event_type}_{mode}()")
+    except Exception as e:
+        print("""Please try again. The program only works for GCal -> (Create, Update, and Remove),
+              GMeet -> (Create, Update, or Remove), or Gmail -> (Create, Update, Send, and Delete)""", file=sys.stderr)
+        print(f"Error: {e}", file=sys.stderr)
 
-    if event_type == "gcal":
-        google_setup()
-        if mode == "create":
-            gcal_create()
-        elif mode == "update":
-            gcal_update()
-        elif mode == "remove":
-            gcal_remove()
-        else:
-            print("Please try again. The program only works for Create, Update, and Remove.", file=sys.stderr)
-            exit(1)
-    elif event_type == "gmeet":
-        google_setup()
-        if mode == "create":
-            gmeet_create()
-        elif mode == "update":
-            gmeet_update()
-        elif mode == "remove":
-            gmeet_remove()
-        else:
-            print("Please try again. The program only works for Create, Update, and Remove.", file=sys.stderr)
-            exit(1)
-    elif event_type == "gmail":
-        google_setup()
-        if mode == "create":
-            gmail_create()
-        elif mode == "update":
-            gmail_update()
-        elif mode == "send":
-            gmail_send()
-        elif mode == "remove":
-            print("This is an error. You cannot delete a draft currently")
-            exit(1)
-            raise NotImplementedError  # todo if time
-        else:
-            print("Please try again. The program only works for Create, Update, and Send.", file=sys.stderr)
-            exit(1)
-    else:
-        print("Please try again. The program only works for Google Calendar, Google Meet, and Gmail.", file=sys.stderr)
-        exit(1)
+
+    # if event_type == "gcal":
+    #     google_setup()
+    #     if mode == "create":
+    #         gcal_create()
+    #     elif mode == "update":
+    #         gcal_update()
+    #     elif mode == "remove":
+    #         gcal_remove()
+    #     else:
+    #         print("Please try again. The program only works for Create, Update, and Remove.", file=sys.stderr)
+    #         exit(1)
+    # elif event_type == "gmeet":
+    #     google_setup()
+    #     if mode == "create":
+    #         gmeet_create()
+    #     elif mode == "update":
+    #         gmeet_update()
+    #     elif mode == "remove":
+    #         gmeet_remove()
+    #     else:
+    #         print("Please try again. The program only works for Create, Update, and Remove.", file=sys.stderr)
+    #         exit(1)
+    # elif event_type == "gmail":
+    #     google_setup()
+    #     if mode == "create":
+    #         gmail_create()
+    #     elif mode == "update":
+    #         gmail_update()
+    #     elif mode == "send":
+    #         gmail_send()
+    #     elif mode == "remove":
+    #         print("This is an error. You cannot delete a draft currently")
+    #         exit(1)
+    #         raise NotImplementedError  # todo if time
+    #     else:
+    #         print("Please try again. The program only works for Create, Update, and Send.", file=sys.stderr)
+    #         exit(1)
+    # else:
+    #     print("Please try again. The program only works for Google Calendar, Google Meet, and Gmail.", file=sys.stderr)
+    #     exit(1)
 
 
 #
