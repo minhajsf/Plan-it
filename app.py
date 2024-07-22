@@ -173,6 +173,56 @@ def gpt_format_json(system_instructions: str, input_string: str):
         print(f"Error processing message: {e}")
         return None
 
+def extract_keywords(prompt):
+    completion = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": """You are an assistant who can find a prompt's keywords 
+                                        which will be used to query a database. In your response, 
+                                        separate keywords with a comma."""},
+            {"role": "user", "content": f'This is the prompt: {prompt}'}
+        ]
+    )
+    response = completion.choices[0].message.content
+
+    keywords = [keyword.strip() for keyword in response.split(',')]
+    return keywords
+
+def find_event_id(prompt, list):
+    completion = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": """You are an assistant who can determine a specific event based on a prompt. 
+                                        Return the value of the event_id from the event list closest to the prompt."""},
+            {"role": "user", "content": f'This is the prompt: {prompt}. This is the list: {list}'}
+        ]
+    )
+    event_id = completion.choices[0].message.content
+    return event_id
+
+def find_meeting_id(prompt, list):
+    completion = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": """You are an assistant who can determine a specific meeting based on a prompt. 
+                                        Return the value of the meeting_id from the meeting list closest to the prompt."""},
+            {"role": "user", "content": f'This is the prompt: {prompt}. This is the list: {list}'}
+        ]
+    )
+    meeting_id = completion.choices[0].message.content
+    return meeting_id
+
+def find_email_id(prompt, list):
+    completion = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": """You are an assistant who can determine a specific email based on a prompt. 
+                                        Return the value of the email_id from the email list closest to the prompt."""},
+            {"role": "user", "content": f'This is the prompt: {prompt}. This is the list: {list}'}
+        ]
+    )
+    email_id = completion.choices[0].message.content
+    return email_id
 
 @socketio.on('user_prompt')
 def handle_user_prompt(prompt):
