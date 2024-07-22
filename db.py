@@ -19,14 +19,15 @@ class Users(db.Model):
     token = db.Column(db.String, nullable=True)
 
     def set_password(self, password):
-        self.password = generate_password_hash(password, method='pbkdf2:sha256')
+        self.password = generate_password_hash(
+            password, method='pbkdf2:sha256')
 
     def check_password(self, password):
         return check_password_hash(self.password, password)
 
     def __repr__(self):
         return f"User('{self.email}')"
-    
+
     def __init__(self, **kwargs):
         """
         Inititalizes a User object.
@@ -39,12 +40,11 @@ class Users(db.Model):
         incr serialize User object.
         """
 
-        return{
+        return {
             "user_id": self.user_id,
             "name": self.name,
             "email": self.email,
         }
-
 
 
 class Events(db.Model):
@@ -88,7 +88,7 @@ class Events(db.Model):
             "event_id": self.event_id,
             "event_dictionary": self.event_dictionary
         }
-    
+
 
 class Meets(db.Model):
     """
@@ -178,6 +178,3 @@ class Emails(db.Model):
             "email_dictionary": self.email_dictionary
 
         }
-
-        
-

@@ -36,7 +36,6 @@ from flask_socketio import SocketIO, emit
 load_dotenv()
 
 
-
 app = Flask(__name__)
 proxied = FlaskBehindProxy(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
@@ -48,29 +47,33 @@ with app.app_context():
 migrate = Migrate(app, db)
 socketio = SocketIO(app)
 
+
 @socketio.on('user_prompt')
 def handle_user_prompt(prompt):
     # Handle the user's prompt here
     response = f"Received: {prompt}"
     emit('server_response', response)
+
+
 @app.route('/')
 def root():
     return redirect(url_for('home'))
 
+
 @app.route("/register", methods=['GET', 'POST'])
 def register():
     form = RegistrationForm()
-    if form.validate_on_submit():  
+    if form.validate_on_submit():
         existing_user = Users.query.filter_by(email=form.email.data).first()
         if existing_user:
             flash('Email already taken. Please use a different email.', 'danger')
             return redirect(url_for('register'))
-        user = Users(name = form.full_name.data, email=form.email.data)
+        user = Users(name=form.full_name.data, email=form.email.data)
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
         flash(f'Account created for {form.email.data}!', 'success')
-        return redirect(url_for('login'))  
+        return redirect(url_for('login'))
     return render_template('register.html', title='Register', form=form)
 
 
@@ -107,23 +110,28 @@ def login_required(f):
 
     return decorated_function
 
+
 @app.route('/home')
 def home():
     return render_template('home.html')
+
 
 @app.route('/chat')
 @login_required
 def chat():
     return render_template('chat.html')
 
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
     return render_template('dashboard.html')
-    
+
+
 @app.route('/voice')
 def voice():
-  return render_template('voice.html', title='Record')
+    return render_template('voice.html', title='Record')
+
 
 if __name__ == "__main__":
     socketio.run(app, host="0.0.0.0", port=8000, debug=True)
