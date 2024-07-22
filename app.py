@@ -36,8 +36,6 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 proxied = FlaskBehindProxy(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
 
-
-
 # Database setup
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///plan-it.db'
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -46,7 +44,6 @@ migrate = Migrate(app, db)
 db.init_app(app)
 with app.app_context():
     db.create_all()
-
 
 # ChatGPT API Setup
 client = OpenAI(
@@ -59,6 +56,7 @@ GCAL_SCOPES = ['https://www.googleapis.com/auth/calendar',
 GMEET_SCOPES = ['https://www.googleapis.com/auth/meetings.space.created']
 
 GMAIL_SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
+
 
 @app.route('/')
 def index():
@@ -187,7 +185,6 @@ def gcal():
 
     print("'gcal' route hit", file=sys.stderr)
 
-
     # CHATGPT API
     # Get OPENAI_API_KEY from environment variables
     load_dotenv()
@@ -197,7 +194,6 @@ def gcal():
     g.client = OpenAI(
         api_key=my_api_key,
     )
-
 
     # GOOGLE CALENDAR API
     creds = None
@@ -226,6 +222,7 @@ def gcal():
         else:
             print(f"{filename} does not exist.")
         gcal()
+
 
 # Create a calendar event
 def gcal_create():
@@ -283,7 +280,6 @@ def gcal_create():
     response = response[response.index("{"):
                         len(response) - response[::-1].index("}")]
 
-
     # Fixes the capitalization of True in the response
     response = re.sub(r"\btrue\b", "True", response)
 
@@ -327,7 +323,6 @@ def gcal_create():
 
 # Update a calendar event
 def gcal_update():
-
     print("'gcal_update' route hit", file=sys.stderr)
 
     event_title = session['prompt_dictionary']['title']
@@ -367,7 +362,7 @@ def gcal_update():
 
     response = response[response.index("{"):
                         len(response) - response[::-1].index("}")]
-    
+
     # Fixes the capitalization of True in the response
     response = re.sub(r"\btrue\b", "True", response)
 
@@ -412,7 +407,6 @@ def gcal_update():
 
 # Remove a calendar event
 def gcal_remove():
-
     print("'gcal_remove' route hit", file=sys.stderr)
 
     event_title = session['prompt_dictionary']['title']
@@ -425,7 +419,7 @@ def gcal_remove():
     else:
         print(f"Event not found: {event_title}", file=sys.stderr)
         exit(1)
-    
+
     current_event = event.event_dictionary
     current_event_id = event.event_id
 
@@ -586,8 +580,6 @@ def convert_dict_to_str(attendees):
 @app.route('/gmeet', methods=['GET'])
 def gmeet_setup():
     def get_google_service():
-        if hasattr(g, 'service'):
-            return
         creds = None
         if os.path.exists("token.json"):
             creds = Credentials.from_authorized_user_file("token.json", GMEET_SCOPES)
@@ -602,6 +594,7 @@ def gmeet_setup():
             with open("token.json", "w") as token:
                 token.write(creds.to_json())
         return build("calendar", "v3", credentials=creds)
+
     if not hasattr(g, 'service'):
         g.service = get_google_service()  # global used throughout the gmeet section
 
@@ -682,6 +675,7 @@ def gmeet_remove():
     db.session.delete(meeting_to_remove)
     db.session.commit()
 
+
 #
 # -----------------------------------------------------------------------
 # GMAIL ROUTES
@@ -692,13 +686,13 @@ def get_authenticated_user_email(service):
         profile = service.users().getProfile(userId='me').execute()
         return profile['emailAddress']
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"An error occurred in get email as: {e}")
         return None
 
 
 def email_json_to_raw(email_json):
-    from_field = email_json['from'][0]  # Assuming `from_list` has a single email
-    to_field = ', '.join(email_json['to'])
+    from_field = email_json['from']  # Assuming `from_list` has a single email
+    to_field = email_json['to']
     cc_field = ', '.join(email_json['cc']) if email_json['cc'] else ''
 
     raw_email = f"""From: {from_field}
@@ -710,7 +704,6 @@ Content-Type: text/plain; charset="UTF-8"
 {email_json['body']}
 """
     return raw_email
-
 
 
 def format_system_instructions_for_gmail(query_type_dict: dict, content_dict: dict = None) -> str:
@@ -764,6 +757,7 @@ def update_gmail_draft(service, draft_id, updated_message_body_raw):
         print(f"An error occurred: {e}")
         return None
 
+
 def send_gmail_draft(service, draft_id):
     try:
         # draft =
@@ -773,14 +767,13 @@ def send_gmail_draft(service, draft_id):
     except Exception as e:
         print(f"An error occurred: {e}")
 
-@app.route('/gmail', methods=['GET'])
+
 def gmail_setup():
     """
     Endpoint for Gmail.
     """
+
     def get_gmail_service():
-        if hasattr(g, 'service'):
-            return
         creds = None
         if os.path.exists("token.json"):
             creds = Credentials.from_authorized_user_file("token.json", GMAIL_SCOPES)
@@ -794,9 +787,10 @@ def gmail_setup():
                 creds = flow.run_local_server(port=8080)
             with open("token.json", "w") as token:
                 token.write(creds.to_json())
-        return build("calendar", "v3", credentials=creds)
+        return build("gmail", "v1", credentials=creds)  # Use 'gmail' as the API name
+
     if not hasattr(g, 'gmail_service'):
-        g.gmail_service = get_gmail_service() # global specific to session
+        g.gmail_service = get_gmail_service()  # global specific to session
 
 
 # Creates a draft (not message to allow for updating before sending)
@@ -804,13 +798,13 @@ def gmail_create():
     prompt_dict = session.get('prompt_dictionary')
     prompt = prompt_dict.get('prompt')
 
-    content_dict = {'sender': f"{get_authenticated_user_email(g.gmail_service)}"}
+    content_dict = {'from': f"{get_authenticated_user_email(g.gmail_service)}"}
     instructions = format_system_instructions_for_gmail(prompt_dict, content_dict)
 
     created_email_json = gpt_format_json(instructions, prompt)
     created_email_raw = email_json_to_raw(created_email_json)
     draft = create_gmail_draft(g.gmail_service, created_email_raw)
-
+    print(draft)
     # save draft in db
 
     newly_drafted_email = Emails(
@@ -826,7 +820,6 @@ def gmail_create():
     db.session.add(newly_drafted_email)
     db.session.commit()
     print("Gmail draft created successfully")
-
 
 
 # Updates a draft
