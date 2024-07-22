@@ -220,7 +220,7 @@ def determine_query_type(message: str):
                  "content": """You are an assistant that determines if a message is related to either Google Calendar,
                             Google Meet, or Gmail. Return a json response as {'event_type': , 
                             'mode': , 'title': } where type is gcal, gmeet, or gmail. If the type is gcal or gmeet, the mode
-                            can be create, update, or remove. For email, the mode can be create, update, or send. Add 
+                            can be create, update, or remove. For email, the mode can be create, delete, or send. Add 
                             the subject to title field if needed"""},
                 {"role": "user", "content": f"The message is the following: {message}"}
             ]
@@ -905,6 +905,42 @@ def send_gmail_draft(service, draft_id):
         print(f"An error occurred: {e}")
 
 
+def delete_gmail_draft(service, draft_id):
+    try:
+        # Delete the draft
+        service.users().drafts().delete(userId='me', id=draft_id).execute()
+        print("Draft deleted successfully.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
+@socketio('approval-request-response')
+def handle_approval_response(response):
+    status = response.get('status')
+    email_json = response.get('email')
+    if email_json and (status == 'save' or status == 'send'):
+        email_raw = email_json_to_raw(email_json)
+        draft = create_gmail_draft(g.service, email_raw)
+        draft_id = draft.get('id')
+        if status == 'send':
+            send_gmail_draft(g.service, draft_id)
+            print("Gmail draft created successfully")
+        elif status == 'save':
+            newly_drafted_email = Emails(
+                user_id=session['user_id'],
+                subject=email_json['subject'],
+                body=email_json['body'],
+                sender=email_json['from'],
+                cc=email_json['cc'],
+                to=email_json['to'],
+                email_id=draft.get('id'),
+                email_dictionary=json.dumps(email_json),
+            )
+            db.session.add(newly_drafted_email)
+            db.session.commit()
+    # technically there is a 'delete' but it's not anywhere, so we just ignore the data
+
+
 # Creates a draft (not message to allow for updating before sending)
 def gmail_create():
     prompt_dict = session.get('prompt_dictionary')
@@ -914,89 +950,8 @@ def gmail_create():
     instructions = format_system_instructions_for_gmail(prompt_dict, content_dict)
 
     created_email_json = gpt_format_json(instructions, prompt)
-    created_email_raw = email_json_to_raw(created_email_json)
-    draft = create_gmail_draft(g.service, created_email_raw)
 
-    # save draft in db
-
-    newly_drafted_email = Emails(
-        # todo add user id field also
-        user_id=session['user_id'],
-        subject=created_email_json['subject'],
-        body=created_email_json['body'],
-        sender=created_email_json['from'],
-        cc=created_email_json['cc'],
-        to=created_email_json['to'],
-        email_id=draft.get('id'),
-        email_dictionary=json.dumps(created_email_json),
-    )
-    db.session.add(newly_drafted_email)
-    db.session.commit()
-    print("Gmail draft created successfully")
-
-
-
-# Updates a draft
-def gmail_update():
-    prompt_dict = session.get('prompt_dictionary')
-    user_prompt = session['prompt_dictionary']['prompt']
-    user_id = session['user_id']
-
-    #Find keywords from prompt
-    keywords = extract_keywords(user_prompt)
-    print(keywords)
-
-    #Limit search to user
-    emails = Emails.query.filter_by(user_id=user_id).all()
-    print(Emails.query.filter_by(user_id=user_id).first().email_id)
-    if not emails:
-        print("Emails not found in db. Try again?")
-        return
-    
-    # Filter events then send to API to find id
-    filtered_emails = [[{"meet_id": email.email_id}, email.email_dictionary] for email in emails if any(keyword.lower() in email.summary.lower() or keyword.lower() in email.description.lower() for keyword in keywords)]
-    print(filtered_emails)
-
-    if not filtered_emails:
-        print("No emails found matching the provided keywords.", file=sys.stderr)
-        return "No matching emails found."
-
-    email_id = find_email_id(user_prompt, filtered_emails)
-    print(email_id)
-    if email_id == 'invalid':
-        print("Not enough information, please try again?")
-        return
-    # query event from database
-    #event = Events.query.filter_by(title=prompt_dict.get('title')).first()
-    draft_to_update = Emails.query.filter_by(email_id=email_id.replace('\'', '')).first()
-    print(draft_to_update)
-
-    if not draft_to_update:
-        print("No Gmail draft found")
-        return
-
-    draft_serialized = draft_to_update.serialize()
-    draft_id = draft_to_update.email_id
-
-    instructions = format_system_instructions_for_gmail(prompt_dict, draft_serialized)
-
-    # CHECKOUT (why 'title' instead of 'prompt')
-    updated_draft_json = gpt_format_json(instructions, prompt_dict.get('prompt'))
-    updated_draft_raw = email_json_to_raw(updated_draft_json)
-
-    updated_draft = update_gmail_draft(g.service, draft_id, updated_draft_raw)
-
-    draft_to_update.subject = updated_draft_json.get('subject')
-    draft_to_update.body = updated_draft_json.get('body')
-    draft_to_update.cc = updated_draft_json.get('cc')
-    draft_to_update.to = updated_draft_json.get('to')
-    draft_to_update.email_dictionary = json.dumps(updated_draft_json)
-    # from draft itself not json
-    draft_to_update.email_id = updated_draft.get('id')
-    # I chose to not allow the sender to be updated bc that doesnt make sense
-
-    db.session.commit()
-    print("Email draft updated successfully")
+    socketio.emit('request-approval', created_email_json)
 
 
 # Sends a draft
@@ -1010,6 +965,18 @@ def gmail_send():
 
         # remove from db bc its sent, so you can't edit it again anyway
         db.session.delete(email_to_send)
+        db.session.commit()
+
+
+def gmail_delete():
+    prompt_dict = session.get('prompt_dictionary')
+    subject_of_draft = prompt_dict.get('title')
+    draft_to_delete = Emails.query.filter_by(subject=subject_of_draft).first()
+    if draft_to_delete:
+        # delete from our db
+        draft_id = draft_to_delete.email_id
+        delete_gmail_draft(g.gmail_service, draft_id)
+        db.session.delete(draft_to_delete)
         db.session.commit()
 
 
