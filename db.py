@@ -145,7 +145,7 @@ class Emails(db.Model):
     user_id = db.Column(db.Integer, autoincrement=True)
     subject = db.Column(db.String, nullable=False)
     body = db.Column(db.String, nullable=False)
-    cc = db.Column(db.String, nullable=False)
+    cc = db.Column(db.String, nullable=True)
     to = db.Column(db.String, nullable=False)
     email_id = db.Column(db.String, nullable=False)
     email_dictionary = db.Column(db.String, nullable=False)

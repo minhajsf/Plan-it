@@ -813,6 +813,7 @@ def gmeet_remove():
     db.session.delete(meeting_to_remove)
     db.session.commit()
 
+
 #
 # -----------------------------------------------------------------------
 # GMAIL ROUTES
@@ -841,7 +842,6 @@ Content-Type: text/plain; charset="UTF-8"
 {email_json['body']}
 """
     return raw_email
-
 
 
 def format_system_instructions_for_gmail(query_type_dict: dict, content_dict: dict = None) -> str:
@@ -882,19 +882,6 @@ def create_gmail_draft(service, message_body_raw):
         return None
 
 
-def update_gmail_draft(service, draft_id, updated_message_body_raw):
-    try:
-        message = {
-            'message': {
-                'raw': base64.urlsafe_b64encode(updated_message_body_raw.encode('utf-8')).decode('utf-8')
-            }
-        }
-        draft = service.users().drafts().update(userId='me', id=draft_id, body=message).execute()
-        return draft
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        return None
-
 def send_gmail_draft(service, draft_id):
     try:
         # draft =
@@ -926,19 +913,22 @@ def handle_approval_response(response):
             send_gmail_draft(g.service, draft_id)
             print("Gmail draft created successfully")
         elif status == 'save':
+            # add stuff here for other fields
+
             newly_drafted_email = Emails(
-                user_id=session['user_id'],
                 subject=email_json['subject'],
                 body=email_json['body'],
-                sender=email_json['from'],
-                cc=email_json['cc'],
                 to=email_json['to'],
+
+                user_id=session['user_id'],
+                sender=get_authenticated_user_email(g.service),
+                cc=email_json.get('cc'),
                 email_id=draft.get('id'),
                 email_dictionary=json.dumps(email_json),
             )
             db.session.add(newly_drafted_email)
             db.session.commit()
-    # technically there is a 'delete' but it's not anywhere, so we just ignore the data
+    # technically there is a 'quit' but it's not anywhere, so we just ignore the data
 
 
 # Creates a draft (not message to allow for updating before sending)
