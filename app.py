@@ -7,7 +7,6 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_behind_proxy import FlaskBehindProxy
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-import logging
 import socketio
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -20,7 +19,6 @@ from tzlocal import get_localzone
 import uuid
 import base64
 import os.path
-import urllib3
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow

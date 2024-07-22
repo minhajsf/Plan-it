@@ -151,6 +151,8 @@ body {
     padding: 20px; 
     border-bottom: 1px solid #ccc; 
     padding-top: 85px;
+    display: flex;
+    flex-direction: column;
 } 
 .chat-box::-webkit-scrollbar { 
     height: 5px; 
@@ -181,14 +183,16 @@ body {
     border-radius: 18px;
     color: white;
     font-size: 14px;
-    display: flex;
+    display: inline-flex;
     flex-direction: column;
     word-wrap: break-word;
+    width: auto;
+    max-width: 60%;
 } 
 .chat-message.user { 
     background-color: #ffffff7c; 
     align-self: flex-end; 
-    text-align: right;
+    align-items: right;
     margin-left: auto;
 }
 .chat-message.server { 
