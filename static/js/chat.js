@@ -105,6 +105,16 @@ socket.on('server_response', (response) => {
     appendMessage(response, 'server');
 });
 
+socket.on('meeting_update', (data) => {
+    const message = data.message || 'Meeting updated successfully';
+    appendMessage(message, 'server');
+});
+
+socket.on('meeting_created', (data) => {
+    const message = data.message || 'Meeting created successfully';
+    appendMessage(message, 'server');
+});
+
 // Handle redirection from server
 socket.on('redirect_to_app', (data) => {
     window.location.href = data.url;
