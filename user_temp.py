@@ -65,7 +65,7 @@ def register():
         if existing_user:
             flash('Email already taken. Please use a different email.', 'danger')
             return redirect(url_for('register'))
-        user = Users(email=form.email.data)
+        user = Users(name = form.name.data, email=form.email.data)
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()

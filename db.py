@@ -174,4 +174,8 @@ class Emails(db.Model):
             "from": self.sender,
             "email_id": self.email_id,
             "email_dictionary": self.email_dictionary
+
         }
+
+        
+
