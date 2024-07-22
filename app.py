@@ -828,8 +828,8 @@ def get_authenticated_user_email(service):
 
 
 def email_json_to_raw(email_json):
-    from_field = email_json['from'][0]  # Assuming `from_list` has a single email
-    to_field = ', '.join(email_json['to'])
+    from_field = email_json['from']  # Assuming `from_list` has a single email
+    to_field = email_json['to']
     cc_field = ', '.join(email_json['cc']) if email_json['cc'] else ''
 
     raw_email = f"""From: {from_field}
@@ -910,7 +910,7 @@ def gmail_create():
     prompt_dict = session.get('prompt_dictionary')
     prompt = prompt_dict.get('prompt')
 
-    content_dict = {'sender': f"{get_authenticated_user_email(g.service)}"}
+    content_dict = {'from': f"{get_authenticated_user_email(g.service)}"}
     instructions = format_system_instructions_for_gmail(prompt_dict, content_dict)
 
     created_email_json = gpt_format_json(instructions, prompt)
