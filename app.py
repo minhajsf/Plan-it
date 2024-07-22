@@ -86,6 +86,12 @@ def google_setup():
         if hasattr(g, 'service'):
             return
         creds = None
+
+        # # get current user's id
+        # user_id = session.get('user_id')
+
+        # token = Users.query.filter_by(id=user_id).first().token
+
         if os.path.exists("token.json"):
             creds = Credentials.from_authorized_user_file("token.json", SCOPES)
         if not creds or not creds.valid:
@@ -108,7 +114,7 @@ def determine_query_type(message: str):
         # Ideally we remove the creation part and make it global itf
         client = OpenAI(api_key=OPENAI_API_KEY)
         # Make API request
-        response = client.chat.completions.create(
+        completion = client.chat.completions.create(
             model="gpt-3.5-turbo",
             response_format={"type": "json_object"},
             messages=[
@@ -122,12 +128,16 @@ def determine_query_type(message: str):
             ]
         )
 
+        response = completion.choices[0].message.content
+
+        # Ensure the response is a JSON string
         response = response[response.index("{"):len(response) - response[::-1].index("}")]
-        response = json.loads(response.choices[0].message.content)
+        # Fixes the capitalization of True in the response
+        response = re.sub(r"\btrue\b", "True", response)
+        # Extract and parse the response
+        response = json.loads(response)
 
         # Error handling -- can be removed in prod!
-        print(type(response))
-        print(response)
 
         return response  # response is dict with keys event_type, mode, and title
     except Exception as e:
@@ -149,14 +159,14 @@ def gpt_format_json(system_instructions: str, input_string: str):
             ]
         )
 
+        response = completion.choices[0].message.content
+
         # Ensure the response is a JSON string
         response = response[response.index("{"):len(response) - response[::-1].index("}")]
-
         # Fixes the capitalization of True in the response
         response = re.sub(r"\btrue\b", "True", response)
-
-        # Extract and parse the response
-        response = json.loads(completion.choices[0].message.content)
+        # Evaluate to dictionary
+        response = eval(response)
 
         return response
     except Exception as e:
@@ -257,17 +267,18 @@ def remove_event(service, event_id):
 
 def format_system_instructions_for_event(query_type_dict: dict, content_dict: dict = None) -> str:
     timeZone = get_localzone()
-    current_datetime = datetime.now()
+    current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
     summary = content_dict.get('summary') if content_dict else '<summary_here>'
     description = content_dict.get('description') if content_dict else '<extra specifications, locations, and descriptions here>'
-    start = content_dict.get('start') if content_dict else 'start time example format <2015-05-28T09:00:00-07:00>'
-    end = content_dict.get('end') if content_dict else 'end time example format <2015-05-28T17:00:00-07:00>'
+    start = content_dict.get('start') if content_dict else f'start time default {current_datetime}-04:00'
+    end = content_dict.get('end') if content_dict else f'end time default {current_datetime}-04:00'
 
     format_instruction = f"""
     You are an assistant that {query_type_dict.get('mode')}s a Google Calendar event using a sample JSON..
     {'Update only the specified information from user message, leave the rest' if query_type_dict.get('mode') == 'update' else ''}
-    Ensure the summary and description are professional and informative.
+    Ensure the summary and description are professional and informative. Use default start/end times if none are provided.
+    If a start time is provided without an end time, set the end time to 30 minutes after the start time.
     Current_time: {datetime.now()}
 
     event = {{
@@ -309,7 +320,7 @@ def gcal_create():
         start=event_data.get("start").get("dateTime"),
         end=event_data.get("end").get("dateTime"),
         event_id=event.get("id"),
-        event_dictionary=event_data
+        event_dictionary=json.dumps(event_data)
     )
 
     db.session.add(new_event)
