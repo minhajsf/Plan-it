@@ -8,53 +8,87 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>
     <script src="../static/js/chat.js" defer></script>
+    <script src="../static/js/flash.js"></script>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg black">
-        <h1>Plan-it</h1>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav mr-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('home') }}">Home</a>
-                    
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
-                </li>
-                
-            </ul>
-            <form class="form-inline">
-                {% if session.get('user_id') %}
-                    <a href="{{ url_for('logout') }}" class="btn">Logout</a>
-                {% endif %}
-            </form>
-        </div>
-    </nav>
-    <div class="chat-container">
-        <div class = "header">
+    {% block content %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <nav class="navbar navbar-expand-lg black">
             <h1>Plan-it</h1>
-        </div>
-        <div class="chat-box" id="chatBox">
-            <!-- Chat messages will appear here -->
-        </div>
-        <div class="chat-input">
-            <input id="prompt" class="form-control" autocomplete="off" placeholder="Type a message">
-            <button onclick="sendPrompt()" class="btn btn-primary" style="background-color: transparent; border: none;">
-                <img src="{{ url_for('static', filename='img/Send.png')}}" alt="Send" style="width: 40px; height: 40px;">
-            </button>
-            <div class = "mic-and-indicator">
-                <div class="recording-indicator">
-                    <div class="bar"></div>
-                    <div class="bar"></div>
-                    <div class="bar"></div>
-                </div>
-                <img id="startButton" src="{{ url_for('static', filename='img/mic.png')}}" alt="Start Recording">
-                <img id="stopButton" src="{{ url_for('static', filename='img/mic.png')}}" alt="Stop Recording">
-
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav mr-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('home') }}">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+                    </li>
+                </ul>
+                <form class="form-inline">
+                    {% if session.get('user_id') %}
+                        <a href="{{ url_for('logout') }}" class="btn btn-outline-light">Logout</a>
+                    {% endif %}
+                </form>
             </div>
-            <p id="outputText"></p>
+        </nav>
+        <div class="chat-container">
+            <div class="header">
+                <h1>Chat</h1>
+                <div class="icons">
+                    <button data-setting-target="#help" class="icon-button">
+                        <img src="{{url_for('static', filename='img/Help circle.png')}}" alt="Help" class="icon">
+                    </button>
+                    <div class="popup help" id="help">
+                        <div class="popup-header">Help
+                            <button data-close-button class="close-button">&times;</button>
+                        </div>
+                        <hr>
+                        <div class="popup-body">
+                            <p>need help? skill issue</p>
+                        </div>
+                    </div>
+                    
+                    <button data-setting-target="#settings" class="icon-button">
+                        <img src="{{url_for('static', filename='img/settings.png')}}" alt="Settings" class="icon">
+                    </button>
+                    <div class="popup settings" id="settings">
+                        <div class="popup-header">Settings
+                            <button data-close-button class="close-button">&times;</button>
+                        </div>
+                        <hr>
+                        <div class="popup-body">
+                           
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="overlay"></div>
+            <div class="chat-box" id="chatBox">
+                <!-- Chat messages will appear here -->
+            </div>
+            <div class="chat-input">
+                <input id="prompt" class="form-control" autocomplete="off" placeholder="Type a message">
+                <button onclick="sendPrompt()" class="btn btn-primary" style="background-color: transparent; border: none;">
+                    <img src="{{ url_for('static', filename='img/Send.png')}}" alt="Send" style="width: 40px; height: 40px;">
+                </button>
+                <div class="mic-and-indicator">
+                    <div class="recording-indicator">
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                    </div>
+                    <img id="startButton" src="{{ url_for('static', filename='img/mic.png')}}" alt="Start Recording">
+                    <img id="stopButton" src="{{ url_for('static', filename='img/mic.png')}}" alt="Stop Recording">
+                </div>
+                <p id="outputText"></p>
+            </div>
         </div>
-    </div>
+    {% endblock %}
 </body>
 </html>
-

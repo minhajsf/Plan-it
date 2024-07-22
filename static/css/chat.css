@@ -19,20 +19,18 @@ body {
     margin-left: 10px;
 }
 #startButton, #stopButton { 
-    margin: 0 5px 0 5px;
+    margin: 5px 5px 0 5px;
     padding: 5px;
-    width: 50px;
-    height: 50px;
+    width: 40px;
+    height: 40px;
     cursor: pointer; 
     border-radius: 50%;
     transition: opacity 1s, visibility 1s;
 } 
 #startButton { 
-    background-color: #4CAF50; 
     color: white; 
 } 
 #stopButton { 
-    background-color: #f44336; 
     color: white; 
     display: none; 
 }
@@ -48,8 +46,91 @@ body {
     top: 0; left: 0; right: 0;
     border-top-left-radius: 20px;
     border-top-right-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.icon-button {
+    width: 35px;
+    height: 35px;
+    background-color: transparent; 
+    border: none; 
+    padding: 0; 
+    margin: 0; 
+}
+.icon-button img {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+.settings, .help {
     position: fixed;
-} 
+    top: 50%;
+    left:50%;
+    transform: translate(-50%, -50%) scale(0);
+    transition: 200ms ease-in-out;
+    border-radius: 20px; 
+    padding: 10px; 
+    box-shadow: 0 0 10px 5px rgba(0, 0, 0, 0.5);
+    background: rgba(51, 51, 51, 0.9);
+    backdrop-filter: blur(10px);
+    width: 80%;
+    height: 100%;
+    z-index: 10;
+}
+.settings.active, .help.active {
+    transform: translate(-50%, -50%) scale(1);
+}
+.close-button {
+    cursor: pointer;
+    border: none;
+    outline: none;
+    background: none;
+    font-size: 50px;
+    font-weight: bold;
+    position: absolute; 
+    top: -10px; 
+    right: 20px;
+    color: white;
+}
+#help hr, #settings hr {
+    border: 1px solid #000000;
+
+}
+.close-button:hover {
+    color: red;
+}
+.settings-body, .help-body {
+    padding: 10px 15px;
+    color: #1c1d1d; 
+}
+#overlay {
+    position: fixed;
+    opacity: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0,0,0,.5);
+    pointer-events: none;  
+    transition: 200ms ease-in-out;
+}
+#overlay.active {
+    pointer-events: all;
+    opacity: 1;
+}
+.popup-header {
+    padding: 20px;
+    text-align: center;
+    font-size: 24px;
+    width: 100%; 
+    top: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+}
+.popup-body {
+    text-align: left;
+}
 .chat-container { 
     position: absolute; 
     top: 50%; 
@@ -73,7 +154,8 @@ body {
 } 
 .chat-box::-webkit-scrollbar { 
     height: 5px; 
-    width: 5px; }
+    width: 7px;
+}
 
 .chat-box::-webkit-scrollbar-track { 
     background: transparent; 
@@ -104,7 +186,7 @@ body {
     word-wrap: break-word;
 } 
 .chat-message.user { 
-    background-color: #2e2e2e; 
+    background-color: #ffffff7c; 
     align-self: flex-end; 
     text-align: right;
     margin-left: auto;
@@ -147,7 +229,7 @@ body {
     display: block;
     width: 10px;
     height: 30px;
-    background-color: #f44336;
+    background-color: #ffffff96;
     margin: 0 5px;
     border-radius: 5px;
     animation: bounce 1.5s infinite;
@@ -166,7 +248,6 @@ body {
     }
 }
 
-/* Different delays for each bar */
 .bar:nth-child(2) {
     animation-delay: 0.2s;
 }

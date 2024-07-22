@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/home.css')}}">
     <script src="../static/js/home.js" defer></script>
+    <script src="../static/js/flash.js"></script>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,12 +23,13 @@
             <div class="hidden" id="intro-container">
                 <h1>Welcome to Plan-it</h1>
                 <p>Blast off into a new era of productivity with Plan-it. Leveraging the power of Google's API, effortlessly create events, send emails, and schedule meetings with stellar efficiency.</p>
-                <a href="{{url_for('login')}}" class="btn btn-primary">
+                <a href="{{url_for('login')}}" class="btn btn-primary ">
                     Get started
                 </a>
             </div>
+            <a href="#info"><img src="../static/img/Arrow down.png" alt="arrow-down" id = "arrow"></a>
         </div>
-        <div class="off-white-bg">
+        <div class="off-white-bg" id = "info">
             <div class = "hidden" id = "second-title">
                 <h1>What We Offer</h1>
             </div>
@@ -40,7 +42,7 @@
                             </div>
                         </div>
                         <h2>Event Creation</h2>
-                        <p>Create and manage events with ease, syncing seamlessly with your Google Calendar</p>
+                        <p>Create and manage events with ease, syncing seamlessly with your Google Calendar.</p>
                     </div>
                 </div>
                 <div class="descr hidden">
@@ -75,4 +77,5 @@
         <footer>Plan-it @ 2024. All rights reserved.</footer>
     </div>
 </body>
+
 </html>
