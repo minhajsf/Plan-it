@@ -213,48 +213,6 @@ def handle_user_prompt(prompt):
         print(f"Error: {e}", file=sys.stderr)
 
 
-    # if event_type == "gcal":
-    #     google_setup()
-    #     if mode == "create":
-    #         gcal_create()
-    #     elif mode == "update":
-    #         gcal_update()
-    #     elif mode == "remove":
-    #         gcal_remove()
-    #     else:
-    #         print("Please try again. The program only works for Create, Update, and Remove.", file=sys.stderr)
-    #         exit(1)
-    # elif event_type == "gmeet":
-    #     google_setup()
-    #     if mode == "create":
-    #         gmeet_create()
-    #     elif mode == "update":
-    #         gmeet_update()
-    #     elif mode == "remove":
-    #         gmeet_remove()
-    #     else:
-    #         print("Please try again. The program only works for Create, Update, and Remove.", file=sys.stderr)
-    #         exit(1)
-    # elif event_type == "gmail":
-    #     google_setup()
-    #     if mode == "create":
-    #         gmail_create()
-    #     elif mode == "update":
-    #         gmail_update()
-    #     elif mode == "send":
-    #         gmail_send()
-    #     elif mode == "remove":
-    #         print("This is an error. You cannot delete a draft currently")
-    #         exit(1)
-    #         raise NotImplementedError  # todo if time
-    #     else:
-    #         print("Please try again. The program only works for Create, Update, and Send.", file=sys.stderr)
-    #         exit(1)
-    # else:
-    #     print("Please try again. The program only works for Google Calendar, Google Meet, and Gmail.", file=sys.stderr)
-    #     exit(1)
-
-
 #
 # -----------------------------------------------------------------------
 # GCAL ROUTES
