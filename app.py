@@ -53,12 +53,10 @@ client = OpenAI(
     api_key=OPENAI_API_KEY,
 )
 
-GCAL_SCOPES = ['https://www.googleapis.com/auth/calendar',
-               'https://www.googleapis.com/auth/calendar.events']
-
-GMEET_SCOPES = ['https://www.googleapis.com/auth/meetings.space.created']
-
-GMAIL_SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
+SCOPES = ['https://www.googleapis.com/auth/calendar',
+               'https://www.googleapis.com/auth/calendar.events',
+               'https://www.googleapis.com/auth/meetings.space.created',
+               'https://www.googleapis.com/auth/gmail.modify']
 
 @app.route('/')
 def index():
@@ -80,6 +78,30 @@ def handle_disconnect():
     leave_room(session['socket_id'])  # Leave room when client disconnects
     session.clear()
 
+def google_setup():
+    """
+    Google Auth & Service.
+    """
+    def get_google_service():
+        if hasattr(g, 'service'):
+            return
+        creds = None
+        if os.path.exists("token.json"):
+            creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            else:
+                flow = InstalledAppFlow.from_client_secrets_file(
+                    "credentials.json", SCOPES
+                )
+                creds = flow.run_local_server(port=8080)
+            with open("token.json", "w") as token:
+                token.write(creds.to_json())
+        return build("calendar", "v3", credentials=creds)
+    if not hasattr(g, 'service'):
+        g.service = get_google_service()  # global used throughout gcal, gmeet, and/or gmail
+
 
 def determine_query_type(message: str):
     try:
@@ -99,6 +121,8 @@ def determine_query_type(message: str):
                 {"role": "user", "content": f"The message is the following: {message}"}
             ]
         )
+
+        response = response[response.index("{"):len(response) - response[::-1].index("}")]
         response = json.loads(completion.choices[0].message.content)
 
         # Error handling -- can be removed in prod!
@@ -109,6 +133,35 @@ def determine_query_type(message: str):
     except Exception as e:
         print(f"Error processing message: {e}")
         return {"event_type": "unknown", "mode": "unknown"}
+
+
+def gpt_format_json(system_instructions: str, input_string: str):
+    try:
+        # Make API request
+
+        completion = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system",
+                 "content": system_instructions},
+                {"role": "user", "content": f"String from user: {input_string}"}
+            ]
+        )
+
+        # Ensure the response is a JSON string
+        response = response[response.index("{"):len(response) - response[::-1].index("}")]
+
+        # Fixes the capitalization of True in the response
+        response = re.sub(r"\btrue\b", "True", response)
+
+        # Extract and parse the response
+        response = json.loads(completion.choices[0].message.content)
+
+        return response
+    except Exception as e:
+        print(f"Error processing message: {e}")
+        return None
 
 
 @socketio.on('user_prompt')
@@ -123,55 +176,52 @@ def handle_user_prompt(prompt):
     # make the prompt_dictionary a session variable (global to the flask session)
     session['prompt_dictionary'] = prompt_dictionary
 
-    if prompt_dictionary['event_type'].lower() == "gcal":
+    # determine the event type and mode
+    event_type = prompt_dictionary['event_type'].lower()
+    mode = prompt_dictionary['mode'].lower()
 
-        # Setup GCal API
-        # initialize events.db (Events table)
-        gcal()
+    # TRY eval(f"{event_type}_{mode}()")
 
-        # mode = prompt_dictionary['mode'].lower()
-        # eval(f"gcal_{mode}()")
-        if prompt_dictionary['mode'].lower() == "create":
+    if event_type == "gcal":
+        google_setup()
+        if mode == "create":
             gcal_create()
-        elif prompt_dictionary['mode'].lower() == "update":
+        elif mode == "update":
             gcal_update()
-        elif prompt_dictionary['mode'].lower() == "remove":
+        elif mode == "remove":
             gcal_remove()
         else:
             print("Please try again. The program only works for Create, Update, and Remove.", file=sys.stderr)
             exit(1)
-    elif prompt_dictionary['event_type'].lower() == "gmeet":
-        gmeet_setup()
-        if prompt_dictionary['mode'].lower() == "create":
+    elif event_type == "gmeet":
+        google_setup()
+        if mode == "create":
             gmeet_create()
-        elif prompt_dictionary['mode'].lower() == "update":
+        elif mode == "update":
             gmeet_update()
-        elif prompt_dictionary['mode'].lower() == "remove":
+        elif mode == "remove":
             gmeet_remove()
         else:
             print("Please try again. The program only works for Create, Update, and Remove.", file=sys.stderr)
             exit(1)
-    elif prompt_dictionary['event_type'].lower() == "gmail":
-        gmail_setup()
-        if prompt_dictionary['mode'].lower() == "create":
+    elif event_type == "gmail":
+        google_setup()
+        if mode == "create":
             gmail_create()
-        elif prompt_dictionary['mode'].lower() == "update":
+        elif mode == "update":
             gmail_update()
-        elif prompt_dictionary['mode'].lower() == "send":
+        elif mode == "send":
             gmail_send()
-        elif prompt_dictionary['mode'].lower() == "remove":
+        elif mode == "remove":
             print("This is an error. You cannot delete a draft currently")
+            exit(1)
             raise NotImplementedError  # todo if time
         else:
-            print("Please try again. The program only works for Create, Update, and Remove.", file=sys.stderr)
+            print("Please try again. The program only works for Create, Update, and Send.", file=sys.stderr)
             exit(1)
-        return 1
     else:
         print("Please try again. The program only works for Google Calendar, Google Meet, and Gmail.", file=sys.stderr)
         exit(1)
-    #with app.app_context():
-    #    return redirect(url_for(prompt_type))
-    # emit('server_response', f'Server received: {message}', room=request.sid)
 
 
 #
@@ -180,295 +230,142 @@ def handle_user_prompt(prompt):
 # -----------------------------------------------------------------------
 #
 
-def gcal():
+
+def create_event(service, event_data):
+    event = service.events().insert(
+        calendarId='primary',
+        body=event_data
+    ).execute()
+    return event
+
+
+def update_event(service, event_id, updated_event_data):
+    updated_event = service.events().update(
+        calendarId='primary',
+        eventId=event_id,
+        body=updated_event_data
+    ).execute()
+    return updated_event
+
+
+def remove_event(service, event_id):
+    service.events().delete(
+        calendarId='primary',
+        eventId=event_id
+    ).execute()
+
+
+def format_system_instructions_for_event(query_type_dict: dict, content_dict: dict = None) -> str:
+    timeZone = get_localzone()
+    current_datetime = datetime.now()
+
+    summary = content_dict.get('summary') if content_dict else '<summary_here>'
+    description = content_dict.get('description') if content_dict else '<extra specifications, locations, and descriptions here>'
+    start = content_dict.get('start') if content_dict else 'start time example format <2015-05-28T09:00:00-07:00>'
+    end = content_dict.get('end') if content_dict else 'end time example format <2015-05-28T17:00:00-07:00>'
+
+    format_instruction = f"""
+    You are an assistant that {query_type_dict.get('mode')}s a Google Calendar event using a sample JSON..
+    {'Update only the specified information from user message, leave the rest' if query_type_dict.get('mode') == 'update' else ''}
+    Ensure the summary and description are professional and informative.
+    Current_time: {datetime.now()}
+
+    event = {{
+        "summary": "{summary}",
+        "description": "{description}",
+        "start": {{
+            "dateTime": "{start}",
+            "timeZone": "{timeZone}"
+        }},
+        "end": {{
+            "dateTime": "{end}",
+            "timeZone": "{timeZone}"
+        }},
+        "reminders": {{
+            "useDefault": True
+        }}
+    }}
     """
-    Endpoint for Google Calendar.
-    """
+    return format_instruction.strip()
 
-    print("'gcal' route hit", file=sys.stderr)
-
-
-    # CHATGPT API
-    # Get OPENAI_API_KEY from environment variables
-    load_dotenv()
-    my_api_key = os.getenv('OPENAI_API_KEY')
-
-    # Create an OpenAPI client using the API key
-    g.client = OpenAI(
-        api_key=my_api_key,
-    )
-
-
-    # GOOGLE CALENDAR API
-    creds = None
-    if os.path.exists("token.json"):
-        creds = Credentials.from_authorized_user_file("token.json", GCAL_SCOPES)
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                "credentials.json", GCAL_SCOPES
-            )
-            # Specify a fixed port here
-            creds = flow.run_local_server(port=8080)
-        with open("token.json", "w") as token:
-            token.write(creds.to_json())
-    try:
-        g.service = build("calendar", "v3", credentials=creds)
-    except Exception:
-        # Name of the file to be deleted
-        filename = "token.json"
-        # Delete the file
-        if os.path.exists(filename):
-            os.remove(filename)
-            print(f"{filename} has been reloaded.")
-        else:
-            print(f"{filename} does not exist.")
-        gcal()
 
 # Create a calendar event
 def gcal_create():
-    print("'gcal_create' route hit", file=sys.stderr)
 
-    prompt = session['prompt_dictionary']['prompt']
-    title = session['prompt_dictionary']['title']
+    prompt_dict = session.get('prompt_dictionary')
 
-    # PROMPT
-    # get localhost time zone
-    timeZone = get_localzone()
+    # GPT instructions
+    format_instruction = format_system_instructions_for_event(prompt_dict)
+    
+    # GPT response as JSON
+    event_data = gpt_format_json(format_instruction, prompt_dict['prompt'])
 
-    # Get current dateTime in ISO 8601
-    current_datetime = datetime.now()
-
-    # Create a prompt for GPT API
-    insert_format_instruction = f"""
-    Understand that the current date is {current_datetime}.
-    Based on the following prompt, populate the JSON format below.
-    Don't change anything about any attributes that the user
-    does not give a specification to. Prompt: {prompt} JSON format:
-
-    event = {{
-    "summary": "{title}",
-    "description": "<insert_description_specifications_here>",
-    "start": {{
-        "dateTime": " "2015-05-28T09:00:00-07:00",
-        "timeZone": "{timeZone}"
-    }},
-    "end": {{
-        "dateTime": "2015-05-28T17:00:00-07:00",
-        "timeZone": "{timeZone}"
-    }},
-    "reminders": {{
-        "useDefault": True
-
-
-    }}
-    }}
-    """
-    # Send ChatGPT the user's prompt and store the
-    # response (event dictionary)
-    completion = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        response_format={"type": "json_object"},  # response is ALWAYS json, include json in prompt to work
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": insert_format_instruction}
-        ]
-    )
-
-    # prints the response from GPT
-    response = completion.choices[0].message.content
-
-    response = response[response.index("{"):
-                        len(response) - response[::-1].index("}")]
-
-
-    # Fixes the capitalization of True in the response
-    response = re.sub(r"\btrue\b", "True", response)
-
-    # Converts response string to a dictionary
-    insert_event_dict = eval(response)
-
-    # event description string for printing purposes
-    event_description = f'''\nEvent: 
-    \nTitle: {insert_event_dict["summary"]}
-    \nDescription: {insert_event_dict["description"]}
-    \nStart Time: {insert_event_dict["start"]["dateTime"]}
-    \nEnd Time: {insert_event_dict["end"]["dateTime"]}\n'''
-
-    # Creates new event in calendar
-    insert_event = getattr(g, 'service').events().insert(
-        calendarId='primary',
-        body=insert_event_dict).execute()
-
-    # Get event id
-    insert_event_id = insert_event['id']
-    # Add to database
-    # Add to database
+    event = create_event(g.service, event_data)
+    
     new_event = Events(
         user_id=session['user_id'],
-        event_type="Create",
-        title=insert_event_dict.get("summary"),
-        description=insert_event_dict.get("description"),
-        start=insert_event_dict.get("start").get("dateTime"),
-        end=insert_event_dict.get("end").get("dateTime"),
-        event_id=insert_event_id,
-        event_dictionary=response
+        title=event_data.get("summary"),
+        description=event_data.get("description"),
+        start=event_data.get("start").get("dateTime"),
+        end=event_data.get("end").get("dateTime"),
+        event_id=event.get("id"),
+        event_dictionary=event_data
     )
+
     db.session.add(new_event)
     db.session.commit()
 
-    print(event_description, file=sys.stderr)
     print('Event created! Check your Google Calendar to confirm!\n', file=sys.stderr)
 
-    return insert_event_dict["summary"]
 
-
-# Update a calendar event
 def gcal_update():
+    prompt_dict = session.get('prompt_dictionary')
 
-    print("'gcal_update' route hit", file=sys.stderr)
+    # query event from database
+    event = Events.query.filter_by(title=prompt_dict.get('title')).first()
 
-    event_title = session['prompt_dictionary']['title']
-    event_update = session['prompt_dictionary']['prompt']
+    # if not found in db
+    if not event:
+        print("Eventnot found in db. Try again?")
+        return
 
-    event = Events.query.filter_by(title=event_title).first()
-    current_event = event.event_dictionary
-    current_event_id = event.event_id
+    event_content = event.serialize()
 
-    current_datetime = datetime.now()
+    event_id = event.event_id
 
-    # Update format instruction
-    update_format_instruction = f'''
-    Understand that the current date is {current_datetime}.
-    Based on the following prompt, update the values of the following JSON format 
-    with any updates/changes. Keep the attribute values the same including the date/time
-    if no changes are mentioned within the prompt or if the change is redundant 
-    (same info as current event). Prompt: "{event_update}"
+    # GPT instructions
+    format_instruction = format_system_instructions_for_event(prompt_dict, event_content)
+  
+    # GPT response as JSON
+    event_data = gpt_format_json(format_instruction, prompt_dict.get('prompt'))
 
-    Format of current event:
+    updated_event = update_event(g.service, event_id, event_data)
 
-    {current_event}
+    # event is current entry
+    # update the event attributes in the database
+    event.title = event_data.get('summary')
+    event.description = event_data.get('description')
+    event.start = event_data.get('start')
+    event.end = event_data.get('end')
+    event.event_id = updated_event.get('id')
+    event.event_dictionary = json.dumps(event_data)
 
-    '''
-
-    completion = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": """You are a helpful assistant.
-                You will update the fields that need updating."""},
-            {"role": "user", "content": update_format_instruction}
-        ]
-    )
-
-    # prints the response from GPT
-    response = completion.choices[0].message.content
-
-    response = response[response.index("{"):
-                        len(response) - response[::-1].index("}")]
-    
-    # Fixes the capitalization of True in the response
-    response = re.sub(r"\btrue\b", "True", response)
-
-    # Converts response string to a dictionary
-    updated_event_dict = eval(response)
-
-    updated_event_description = f"""\nUpdated Event:
-    \nEvent - Title: {updated_event_dict["summary"]}
-    \nDescription: {updated_event_dict["description"]}
-    \nStart Time: {updated_event_dict["start"]["dateTime"]}
-    \nEnd Time: {updated_event_dict["end"]["dateTime"]}\n"""
-
-    # # Update the event
-    updated_event = getattr(g, 'service').events().update(
-        calendarId='primary',
-        eventId=current_event_id,
-        body=updated_event_dict
-    ).execute()
-
-    # Add to database
-    new_event = Events(
-        user_id=session['user_id'],
-        event_type="Update",
-        title=updated_event_dict.get("summary"),
-        description=updated_event_dict.get("description"),
-        start=updated_event_dict.get("start").get("dateTime"),
-        end=updated_event_dict.get("end").get("dateTime"),
-
-        # leave the event_id as the the Create event id.
-        # This is to keep track of which event you updated
-        event_id=current_event_id,
-        event_dictionary=response
-    )
-    db.session.add(new_event)
     db.session.commit()
-
-    print(updated_event_description, file=sys.stderr)
-    print('Event Updated! Check your Google Calendar to confirm!\n', file=sys.stderr)
-
-    return updated_event["summary"]
+    print('Event created! Check your Google Calendar to confirm!\n', file=sys.stderr)
 
 
-# Remove a calendar event
 def gcal_remove():
+    prompt_dict = session.get('prompt_dictionary')
 
-    print("'gcal_remove' route hit", file=sys.stderr)
+    # query event from database
+    event = Events.query.filter_by(title=prompt_dict.get('title')).first()
 
-    event_title = session['prompt_dictionary']['title']
+    # remove it from calendar
+    remove_event(g.service, event.event_id)
 
-    # perform a query on the database for the title
-    event = Events.query.filter_by(title=event_title).first()
-
-    if event:
-        print(f"Event found: {event_title}", file=sys.stderr)
-    else:
-        print(f"Event not found: {event_title}", file=sys.stderr)
-        exit(1)
-    
-    current_event = event.event_dictionary
-    current_event_id = event.event_id
-
-    deleted_event_dict = eval(current_event)
-
-    deleted_event_description = f"""Event: \n
-    \nTitle: {deleted_event_dict["summary"]}
-    \nDescription: {deleted_event_dict["description"]}
-    \nStart Time: {deleted_event_dict["start"]["dateTime"]}
-    \nEnd Time: {deleted_event_dict["end"]["dateTime"]}\n"""
-
-    #
-    #
-    #ADD SOME WAY TO WARN THE USER THAT THEY ARE DELETING AN EVENT (y/n)
-    #
-    #
-
-    getattr(g, 'service').events().delete(
-        calendarId='primary',
-        eventId=current_event_id
-    ).execute()
-
-    # Add to database
-    new_event = Events(
-        user_id=session['user_id'],
-        event_type="Remove",
-        title=deleted_event_dict.get("summary"),
-        description=deleted_event_dict.get("description"),
-        start=deleted_event_dict.get("start").get("dateTime"),
-        end=deleted_event_dict.get("end").get("dateTime"),
-
-        # leave the event_id as the the Create event id.
-        # This is to keep track of which event you deleted
-        event_id=current_event_id,
-        event_dictionary=current_event
-    )
-    db.session.add(new_event)
+    # remove from our db
+    db.session.delete(event)
     db.session.commit()
-
-    print(deleted_event_description, file=sys.stderr)
-    print('Event Deleted! Check your Google Calendar to confirm!\n', file=sys.stderr)
-
-    return deleted_event_dict["summary"]
 
 
 #
@@ -555,55 +452,8 @@ def format_system_instructions_for_meeting(query_type_dict: dict, content_dict: 
     return instructions.strip()
 
 
-def gpt_format_json(system_instructions: str, input_string: str):
-    try:
-        # Make API request
-
-        completion = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            response_format={"type": "json_object"},
-            messages=[
-                {"role": "system",
-                 "content": system_instructions},
-                {"role": "user", "content": f"String from user: {input_string}"}
-            ]
-        )
-
-        # Extract and parse the response
-        response = json.loads(completion.choices[0].message.content)
-        print(type(response))
-        print(response)
-        return response
-    except Exception as e:
-        print(f"Error processing message: {e}")
-        return None
-
-
 def convert_dict_to_str(attendees):
     return '`'.join(attendee['email'] for attendee in attendees)
-
-
-@app.route('/gmeet', methods=['GET'])
-def gmeet_setup():
-    def get_google_service():
-        if hasattr(g, 'service'):
-            return
-        creds = None
-        if os.path.exists("token.json"):
-            creds = Credentials.from_authorized_user_file("token.json", GMEET_SCOPES)
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-            else:
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    "credentials.json", GMEET_SCOPES
-                )
-                creds = flow.run_local_server(port=8080)
-            with open("token.json", "w") as token:
-                token.write(creds.to_json())
-        return build("calendar", "v3", credentials=creds)
-    if not hasattr(g, 'service'):
-        g.service = get_google_service()  # global used throughout the gmeet section
 
 
 def gmeet_create():
@@ -611,12 +461,13 @@ def gmeet_create():
 
     # No content dict bc create
     instructions = format_system_instructions_for_meeting(prompt_dict)
-    event_data = gpt_format_json(instructions, prompt_dict)
+    event_data = gpt_format_json(instructions, prompt_dict['prompt'])
 
     event = create_google_meet(g.service, event_data)
 
     # Create new Meet for our db
     new_meeting = Meets(
+        user_id=session['user_id'],
         summary=event_data.get('summary'),
         description=event_data.get('description'),
         start=event_data.get('start'),
@@ -652,6 +503,7 @@ def gmeet_update():
     instructions = format_system_instructions_for_meeting(prompt_dict, meeting_content)
 
     # formatted response from gpt --> can be passed directly into create or remove
+    # CHECKOUT (why 'title' instead of 'prompt')
     event_data = gpt_format_json(instructions, prompt_dict.get('title'))
 
     event = update_google_meet(g.service, meeting_id, event_data)
@@ -773,31 +625,6 @@ def send_gmail_draft(service, draft_id):
     except Exception as e:
         print(f"An error occurred: {e}")
 
-@app.route('/gmail', methods=['GET'])
-def gmail_setup():
-    """
-    Endpoint for Gmail.
-    """
-    def get_gmail_service():
-        if hasattr(g, 'service'):
-            return
-        creds = None
-        if os.path.exists("token.json"):
-            creds = Credentials.from_authorized_user_file("token.json", GMAIL_SCOPES)
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-            else:
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    "credentials.json", GMAIL_SCOPES
-                )
-                creds = flow.run_local_server(port=8080)
-            with open("token.json", "w") as token:
-                token.write(creds.to_json())
-        return build("calendar", "v3", credentials=creds)
-    if not hasattr(g, 'gmail_service'):
-        g.gmail_service = get_gmail_service() # global specific to session
-
 
 # Creates a draft (not message to allow for updating before sending)
 def gmail_create():
@@ -815,6 +642,7 @@ def gmail_create():
 
     newly_drafted_email = Emails(
         # todo add user id field also
+        user_id=session['user_id'],
         subject=created_email_json['subject'],
         body=created_email_json['body'],
         sender=created_email_json['from'],
@@ -844,6 +672,7 @@ def gmail_update():
 
     instructions = format_system_instructions_for_gmail(prompt_dict, draft_serialized)
 
+    # CHECKOUT (why 'title' instead of 'prompt')
     updated_draft_json = gpt_format_json(instructions, prompt_dict.get('title'))
     updated_draft_raw = email_json_to_raw(updated_draft_json)
 
