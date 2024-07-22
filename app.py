@@ -108,7 +108,7 @@ def determine_query_type(message: str):
         # Ideally we remove the creation part and make it global itf
         client = OpenAI(api_key=OPENAI_API_KEY)
         # Make API request
-        completion = client.chat.completions.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             response_format={"type": "json_object"},
             messages=[
@@ -123,7 +123,7 @@ def determine_query_type(message: str):
         )
 
         response = response[response.index("{"):len(response) - response[::-1].index("}")]
-        response = json.loads(completion.choices[0].message.content)
+        response = json.loads(response.choices[0].message.content)
 
         # Error handling -- can be removed in prod!
         print(type(response))
