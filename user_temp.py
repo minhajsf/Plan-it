@@ -126,4 +126,4 @@ def voice():
   return render_template('voice.html', title='Record')
 
 if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=8000, debug=True, ssl_context='adhoc')
+    socketio.run(app, host="0.0.0.0", port=8000, debug=True)
