@@ -12,7 +12,8 @@ class Users(db.Model):
     """
     __tablename__ = "users"
 
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(60), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(60), nullable=False)
 
@@ -29,6 +30,7 @@ class Users(db.Model):
         """
         Inititalizes a User object.
         """
+        self.name = kwargs.get("name", "")
         self.email = kwargs.get("email", "")
 
     def serialize(self):
@@ -38,16 +40,8 @@ class Users(db.Model):
 
         return{
             "user_id": self.user_id,
+            "name": self.name,
             "email": self.email,
-        }
-    
-    def incr_serialize(self):
-        """
-        incr Serializes a User object so infinte loop does not occur.
-        """ 
-        return{
-            "user_id": self.user_id,
-            "eamil": self.email,
         }
 
 
@@ -92,21 +86,7 @@ class Events(db.Model):
             "event_id": self.event_id,
             "event_dictionary": self.event_dictionary
         }
-
-    def incr_serialize(self):
-        """
-        Incr Serializes an Event object so an infinite loop does not occur.
-        """
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "title": self.title,
-            "description": self.description,
-            "start": self.start,
-            "end": self.end,
-            "event_id": self.event_id,
-            "event_dictionary": self.event_dictionary
-        }
+    
 
 class Meets(db.Model):
     """
@@ -153,21 +133,6 @@ class Meets(db.Model):
             "meet_dictionary": self.meet_dictionary
         }
 
-    def incr_serialize(self):
-        """
-        Incr Serializes an Meet object so an infinite loop does not occur.
-        """
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "summary": self.summary,
-            "description": self.description,
-            "start": self.start,
-            "end": self.end,
-            "attendees": self.attendees,
-            "meet_id": self.meet_id,
-            "meet_dictionary": self.meet_dictionary
-        }
 
 class Emails(db.Model):
     """
@@ -207,21 +172,6 @@ class Emails(db.Model):
             "body": self.body,
             "to": self.to,
             "from": self.sender,
-            "email_id": self.email_id,
-            "email_dictionary": self.email_dictionary
-        }
-
-    def incr_serialize(self):
-        """
-        Incr Serializes an Email object so an infinite loop does not occur.
-        """
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "subject": self.subject,
-            "body": self.body,
-            "to": self.to,
-            "sender": self.sender,
             "email_id": self.email_id,
             "email_dictionary": self.email_dictionary
         }
