@@ -16,6 +16,7 @@ class Users(db.Model):
     name = db.Column(db.String(60), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(60), nullable=False)
+    token = db.Column(db.Text, nullable=True)
 
     def set_password(self, password):
         self.password = generate_password_hash(password)
@@ -43,6 +44,7 @@ class Users(db.Model):
             "name": self.name,
             "email": self.email,
         }
+
 
 
 class Events(db.Model):
@@ -174,4 +176,8 @@ class Emails(db.Model):
             "from": self.sender,
             "email_id": self.email_id,
             "email_dictionary": self.email_dictionary
+
         }
+
+        
+

@@ -65,7 +65,7 @@ def register():
         if existing_user:
             flash('Email already taken. Please use a different email.', 'danger')
             return redirect(url_for('register'))
-        user = Users(name = form.name.data, email=form.email.data)
+        user = Users(name = form.full_name.data, email=form.email.data)
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
@@ -80,7 +80,7 @@ def login():
     if form.validate_on_submit():
         user = Users.query.filter_by(email=form.email.data).first()
         if user and user.check_password(form.password.data):
-            session['user_id'] = user.id
+            session['user_id'] = user.user_id
             flash(f'Login successful for {form.email.data}', 'success')
             return redirect(url_for('chat'))
         else:
@@ -126,4 +126,4 @@ def voice():
   return render_template('voice.html', title='Record')
 
 if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=8000, debug=True, ssl_context='adhoc')
+    socketio.run(app, host="0.0.0.0", port=8000, debug=True)

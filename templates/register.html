@@ -26,6 +26,21 @@
                 {{ form.hidden_tag() }}
                 <fieldset class="form-group">
                     <div class="form-group">
+                        <div class="label">
+                            <img src="{{ url_for('static', filename='img/User.png') }}" alt="User" class="icon">
+                            {% if form.full_name.errors %}
+                                {{ form.full_name(class="form-control form-control-lg is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.full_name.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.full_name(class="form-control form-control-lg", placeholder="Full Name") }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="form-group">
                         <div class = "label"> 
                             <img src = "{{url_for('static', filename='img/User.png')}}" alt = "User" class = "icon">
                             {% if form.email.errors %}
