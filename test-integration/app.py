@@ -149,10 +149,10 @@ def handle_disconnect():
 # Get user's token.json from db record. Return None if none exists
 def get_user_token(uid):
     user = Users.query.filter_by(user_id=uid).first()
+    user_token = json.loads(user.token)
     print(user, file=sys.stderr)
-    print(user.token, file=sys.stderr)
-    if user and user.token:
-        user_token = json.loads(user.token)
+    print(user_token, file=sys.stderr)
+    if user and user_token:
         print("user token after", file=sys.stderr)
         return Credentials.from_authorized_user_info(user_token)
     return None
@@ -173,9 +173,8 @@ def google_setup():
     def get_google_service():
         print("google_setup route hit", file=sys.stderr)
         if hasattr(g, 'service'):
-            print("Service already exists", file=sys.stderr)
             return
-        print("Service does not exist", file=sys.stderr)
+
         user_id = session['user_id']  # Mock user
         print("1", file=sys.stderr)
         creds = get_user_token(user_id)
@@ -220,9 +219,9 @@ def determine_query_type(message: str):
                 {"role": "system",
                  "content": """You are an assistant that determines if a message is related to either Google Calendar,
                             Google Meet, or Gmail. Return a json response as {'event_type': , 
-                            'mode': } where type is gcal, gmeet, or gmail. If the type is gcal or gmeet, the mode
-                            can be create, update, or remove. For email, the mode can be create, update, or send. 
-                            """},
+                            'mode': , 'title': } where type is gcal, gmeet, or gmail. If the type is gcal or gmeet, the mode
+                            can be create, update, or remove. For email, the mode can be create, update, or send. Add 
+                            the subject to title field if needed"""},
                 {"role": "user", "content": f"The message is the following: {message}"}
             ]
         )
@@ -411,8 +410,7 @@ def format_system_instructions_for_event(query_type_dict: dict, content_dict: di
     You are an assistant that {query_type_dict.get('mode')}s a Google Calendar event using a sample JSON..
     {'Update only the specified information from user message, leave the rest' if query_type_dict.get('mode') == 'update' else ''}
     Ensure the summary and description are professional and informative. Use default start/end times if none are provided.
-    If a start time is provided without an end time, set the end time to 30 minutes after the start time. If there isnt enough 
-    information to fill the dictionary, return {'error': 'invalid'}
+    If a start time is provided without an end time, set the end time to 30 minutes after the start time.
     Current_time: {datetime.now()}
 
     event = {{
@@ -442,9 +440,6 @@ def gcal_create():
 
     # GPT instructions
     format_instruction = format_system_instructions_for_event(prompt_dict)
-    if hasattr(format_instruction, 'error'):
-        print("Not enough info. Please try again")
-        return 
     
     # GPT response as JSON
     event_data = gpt_format_json(format_instruction, prompt_dict['prompt'])
@@ -670,8 +665,7 @@ def format_system_instructions_for_meeting(query_type_dict: dict, content_dict: 
     instructions = f"""
     You are an assistant that {query_type_dict.get('mode')}s a Google Meeting using a sample JSON.
     {'Update only the specified information from user message, leave the rest' if query_type_dict.get('mode') == 'update' else ''}
-    Ensure the summary and description are professional and informative. Use default start/end times if none are provided. If a start time is provided without an end time, set the end time to 30 minutes after the start time. 
-    If there isnt enough information to fill in the dictionary, return {{'error': 'invalid'}}. 
+    Ensure the summary and description are professional and informative.
     Current_time: {datetime.now()}
     event = {{
         "summary": "{summary}",
@@ -702,12 +696,7 @@ def gmeet_create():
 
     # No content dict bc create
     instructions = format_system_instructions_for_meeting(prompt_dict)
-    print(instructions)
-    
     event_data = gpt_format_json(instructions, prompt_dict['prompt'])
-    if event_data.get('error'):
-        print("Not enough information, Please try again")
-        return
 
     print(event_data)
 
@@ -729,10 +718,10 @@ def gmeet_create():
     db.session.commit()
 
     event_description = f"""Meeting created! \nEvent Details:\n
-    \nTitle: {new_meeting.summary}
-    \nDescription: {new_meeting.description}
-    \nStart Time: {new_meeting.start}
-    \nEnd Time: {new_meeting.end}
+    \nTitle: {event.title}
+    \nDescription: {event.description}
+    \nStart Time: {event.start}
+    \nEnd Time: {event.end}
     """
     print("Meeting has been created successfully.")
     socketio.emit('receiver', {'message': event_description})
@@ -807,10 +796,10 @@ def gmeet_update():
     db.session.commit()
 
     event_description = f"""Meeting updated! \nEvent Details:\n
-    \nTitle: {meeting.summary}
-    \nDescription: {meeting.description}
-    \nStart Time: {meeting.start}
-    \nEnd Time: {meeting.end}
+    \nTitle: {event.title}
+    \nDescription: {event.description}
+    \nStart Time: {event.start}
+    \nEnd Time: {event.end}
     """
 
     print("Meeting updated successfully.")
@@ -858,7 +847,7 @@ def gmeet_remove():
     db.session.commit()
 
     event_description = f"""Meeting removed! \nEvent Details:\n
-    \nTitle: {meeting_to_remove.summary}
+    \nTitle: {meeting_to_remove.title}
     \nDescription: {meeting_to_remove.description}
     \nStart Time: {meeting_to_remove.start}
     \nEnd Time: {meeting_to_remove.end}
