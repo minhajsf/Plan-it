@@ -12,7 +12,7 @@ from functools import wraps
 import socketio
 from dotenv import load_dotenv
 from openai import OpenAI
-from db import db, Users, Events, Meets, Emails
+from db import db, Users, Events, Meets, Emails, History
 
 # Google Imports
 import datetime
@@ -479,7 +479,8 @@ def gcal_create():
         event_id=event.get("id"),
         event_dictionary=json.dumps(event_data)
     )
-
+    new_history = History(user_id=session['user_id'], user_prompt=session['prompt_dictionary']['prompt'], chat_response="Event Created!")
+    db.session.add(new_history)
     db.session.add(new_event)
     db.session.commit()
 
@@ -561,6 +562,10 @@ def gcal_update():
     event.event_id = updated_event.get('id')
     event.event_dictionary = json.dumps(event_data)
 
+    new_history = History(user_id=session['user_id'], user_prompt=session['prompt_dictionary']['prompt'], chat_response="Event Updated!")
+
+    db.session.add(new_history)
+
     db.session.commit()
 
     event_description = f"""Event Updated! Check your Google Calendar to confirm!\nEvent Details:\n
@@ -621,6 +626,8 @@ def gcal_remove():
     \nStart Time: {event.start}
     \nEnd Time: {event.end}
     """
+    new_history = History(user_id=session['user_id'], user_prompt=session['prompt_dictionary']['prompt'], chat_response="Event Removed!")
+    db.session.add(new_history)
 
     # remove from our db
     db.session.delete(event)
@@ -753,6 +760,10 @@ def gmeet_create():
         meet_dictionary=json.dumps(event_data)
     )
 
+    new_history = History(user_id=session['user_id'], user_prompt=session['prompt_dictionary']['prompt'], chat_response="Email Created!")
+
+
+    db.session.add(new_history)
     db.session.add(new_meeting)
     db.session.commit()
 
@@ -833,6 +844,9 @@ def gmeet_update():
     meeting.attendees = json.dumps(event_data.get('attendees'))
     meeting.meet_dictionary = json.dumps(event_data)
 
+    new_history = History(user_id=session['user_id'], user_prompt=session['prompt_dictionary']['prompt'], chat_response="Meeting Updated!")
+    db.session.add(new_history)
+
     db.session.commit()
 
     event_description = f"""Meeting updated! \nEvent Details:\n
@@ -885,6 +899,8 @@ def gmeet_remove():
     delete_google_meet(g.service, meeting_to_remove.meet_id)
 
     # remove from our db
+    new_history = History(user_id=session['user_id'], user_prompt=session['prompt_dictionary']['prompt'], chat_response="Meeting Removed!")
+    db.session.add(new_history)
     db.session.delete(meeting_to_remove)
     db.session.commit()
 
@@ -1018,8 +1034,12 @@ def handle_approval_response(response):
             send_gmail_draft(g.service, draft_id)
             print("Gmail draft created successfully")
         elif status == 'save':
+<<<<<<< HEAD
+            new_history = History(user_id=session['user_id'], user_prompt=session['prompt_dictionary']['prompt'], chat_response="Email Created!")
+=======
             # add stuff here for other fields
 
+>>>>>>> main
             newly_drafted_email = Emails(
                 subject=email_json['subject'],
                 body=email_json['body'],
@@ -1032,6 +1052,7 @@ def handle_approval_response(response):
                 email_dictionary=json.dumps(email_json),
             )
             db.session.add(newly_drafted_email)
+            db.session.add(new_history)
             db.session.commit()
     # technically there is a 'quit' but it's not anywhere, so we just ignore the data
 
@@ -1089,8 +1110,10 @@ def gmail_send():
 
     if email_to_send:
         send_gmail_draft(g.service, email_to_send.email_id)
+        new_history = History(user_id=session['user_id'], user_prompt=session['prompt_dictionary']['prompt'], chat_response="Draft Sent!")
 
         # remove from db bc its sent, so you can't edit it again anyway
+        db.session.add(new_history)
         db.session.delete(email_to_send)
         db.session.commit()
 
@@ -1133,7 +1156,9 @@ def gmail_delete():
         # delete from our db
         draft_id = draft_to_delete.email_id
         delete_gmail_draft(g.gmail_service, draft_id)
+        new_history = History(user_id=session['user_id'], user_prompt=session['prompt_dictionary']['prompt'], chat_response="Draft Removed!")
         db.session.delete(draft_to_delete)
+        db.session.add(new_history)
         db.session.commit()
 
 
