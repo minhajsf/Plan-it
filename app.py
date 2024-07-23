@@ -155,11 +155,8 @@ def handle_disconnect():
 # Get user's token.json from db record. Return None if none exists
 def get_user_token(uid):
     user = Users.query.filter_by(user_id=uid).first()
-    print(user, file=sys.stderr)
-    print(user.token, file=sys.stderr)
     if user and user.token:
         user_token = json.loads(user.token)
-        print("user token after", file=sys.stderr)
         return Credentials.from_authorized_user_info(user_token)
     return None
 
@@ -177,45 +174,33 @@ def google_setup():
     Google Auth & Service.
     """
     def get_google_service():
-        print("google_setup route hit", file=sys.stderr)
         if hasattr(g, 'service'):
             print("Service already exists", file=sys.stderr)
             return
         print("Service does not exist", file=sys.stderr)
-        user_id = session['user_id']  # Mock user
-        print("1", file=sys.stderr)
+        user_id = session['user_id']  # Get user_id from session
         creds = get_user_token(user_id)
-        print("2", file=sys.stderr)
 
         if not creds or not creds.valid:
-            print("3", file=sys.stderr)
             if creds and creds.expired and creds.refresh_token:
-                print("4", file=sys.stderr)
                 creds.refresh(Request())
-                print("5", file=sys.stderr)
                 save_user_token(user_id, creds)
-                print("6", file=sys.stderr)
             else:
-                print("7", file=sys.stderr)
                 flow = InstalledAppFlow.from_client_secrets_file(
                     "credentials.json", SCOPES
                 )
-                print("8", file=sys.stderr)
                 creds = flow.run_local_server(port=8080)
-                print("9", file=sys.stderr)
                 save_user_token(user_id, creds)
-                print("10", file=sys.stderr)
 
         return build("calendar", "v3", credentials=creds)
+    
     if not hasattr(g, 'service'):
-        print("0", file=sys.stderr)
         # global used throughout gcal, gmeet, and/or gmail
         g.service = get_google_service()
 
 
 def determine_query_type(message: str):
     try:
-        print("determine_query_type route hit", file=sys.stderr)
         # Ideally we remove the creation part and make it global itf
         client = OpenAI(api_key=OPENAI_API_KEY)
         # Make API request
@@ -256,8 +241,6 @@ def determine_query_type(message: str):
 def gpt_format_json(system_instructions: str, input_string: str):
     try:
         # Make API request
-        print("gpt_format_json route hit", file=sys.stderr)
-
         completion = client.chat.completions.create(
             model="gpt-3.5-turbo",
             response_format={"type": "json_object"},
@@ -290,9 +273,9 @@ def extract_keywords(prompt):
     completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
-            {"role": "system", "content": """You are an assistant who can find a prompt's keywords 
-                                        which will be used to query a database. In your response, 
-                                        separate keywords with a comma."""},
+            {"role": "system", "content": """You are an assistant who can find a prompt's keywords which
+                                        will be used to query a database. Be generous with the amount of key words.
+                                        In your response, separate keywords with a comma."""},
             {"role": "user", "content": f'This is the prompt: {prompt}'}
         ]
     )
@@ -307,7 +290,8 @@ def find_event_id(prompt, list):
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": """You are an assistant who can determine a specific event based on a prompt. 
-                                        Return only the value of the event_id from the event list closest to the prompt. 
+                                        Return only the value of the event_id from the event list closest to the prompt whose title 
+                                        matches closest to the calendar event the prompt is trying to access. 
                                         If none match return 'invalid'."""},
             {"role": "user", "content": f'This is the prompt: {prompt}. This is the list: {list}'}
         ]
@@ -321,8 +305,8 @@ def find_meeting_id(prompt, list):
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": """You are an assistant who can determine a specific meeting based on a prompt. 
-                                        Return only the value of the meet_id from the meeting list closest to the prompt.
-                                        If none match return 'invalid'."""},
+                                        Return only the value of the meet_id from the meeting list whose title 
+                                        matches closest to the meeting the prompt is trying to access. If none match return 'invalid'."""},
             {"role": "user", "content": f'This is the prompt: {prompt}. This is the list: {list}'}
         ]
     )
@@ -335,7 +319,8 @@ def find_email_id(prompt, list):
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": """You are an assistant who can determine a specific email based on a prompt. 
-                                        Return only the value of the email_id from the email list closest to the prompt.
+                                        Return only the value of the email_id from the email list whose title 
+                                        matches closest to the email the prompt is trying to access.
                                         If none match return 'invalid'."""},
             {"role": "user", "content": f'This is the prompt: {prompt}. This is the list: {list}'}
         ]
@@ -362,10 +347,9 @@ def handle_user_prompt(prompt):
     # TRY eval(f"{event_type}_{mode}()")
     try:
         google_setup()
-        print(prompt_dictionary)
 
         # Send success message to chat reciever-end
-        print(f"Event Type: {event_type}, Mode: {mode}")
+        print(f"Event Type: {event_type}, Mode: {mode}", file=sys.stderr)
         socketio.emit('receiver', {'message': f"Event Type: {event_type}, Mode: {mode}"})
         success_message = eval(f"{event_type}_{mode}()")
         
@@ -395,7 +379,6 @@ def create_event(service, event_data):
 
 
 def update_event(service, event_id, updated_event_data):
-    print("update_event route hit", file=sys.stderr)
     updated_event = service.events().update(
         calendarId='primary',
         eventId=event_id,
@@ -412,7 +395,6 @@ def remove_event(service, event_id):
 
 
 def format_system_instructions_for_event(query_type_dict: dict, content_dict: dict = None) -> str:
-    print("format_system_instructions_for_event route hit", file=sys.stderr)
     timeZone = get_localzone()
     current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
@@ -428,9 +410,11 @@ def format_system_instructions_for_event(query_type_dict: dict, content_dict: di
     You are an assistant that {query_type_dict.get('mode')}s a Google Calendar event using a sample JSON..
     {'Update only the specified information from user message, leave the rest' if query_type_dict.get('mode') == 'update' else ''}
     Ensure the summary and description are professional and informative. Use default start/end times if none are provided.
-    If a start time is provided without an end time, set the end time to 30 minutes after the start time. If there isnt enough 
+    Default start time is {datetime.now().strftime("%Y-%m-%dT%H:%M:%S") + "-04:00"}.
+    Set the end time to 30 minutes after the start time if no end time is provided. 
+    Default description should be the same as the summary/title. If there isnt enough 
     information to fill the dictionary, return {{'error': 'invalid'}}
-    Current_time: {datetime.now()}
+    Current dateTime: {datetime.now()}
 
     event = {{
         "summary": "{summary}",
@@ -454,7 +438,6 @@ def format_system_instructions_for_event(query_type_dict: dict, content_dict: di
 # Create a calendar event
 def gcal_create():
 
-    print("gcal_create route hit", file=sys.stderr)
     prompt_dict = session.get('prompt_dictionary')
 
     # GPT instructions
@@ -502,11 +485,9 @@ def gcal_update():
 
     # Find keywords from prompt
     keywords = extract_keywords(user_prompt)
-    print(keywords)
 
     # Limit search to user
     events = Events.query.filter_by(user_id=user_id).all()
-    print(Events.query.filter_by(user_id=user_id).first().event_id)
     if not events:
         print("Events not found in db. Try again?")
         socketio.emit('receiver', {'message': 'Events not found in db. Try again?'})
@@ -523,7 +504,6 @@ def gcal_update():
         return "No matching events found."
 
     event_id = find_event_id(user_prompt, filtered_events)
-    print(event_id)
     if event_id == 'invalid':
         print("Not enough information, please try again?")
         socketio.emit('receiver', {'message': 'Not enough information, please try again?'})
@@ -581,11 +561,9 @@ def gcal_remove():
 
     # Find keywords from prompt
     keywords = extract_keywords(user_prompt)
-    print(keywords)
 
     # Limit search to user
     events = Events.query.filter_by(user_id=user_id).all()
-    print(Events.query.filter_by(user_id=user_id).first().event_id)
     if not events:
         print("Events not found in db. Try again?")
         socketio.emit('receiver', {'message': 'Events not found in db. Try again?'})
@@ -602,7 +580,6 @@ def gcal_remove():
         return "No matching events found."
 
     event_id = find_event_id(user_prompt, filtered_events)
-    print(event_id)
     if event_id == 'invalid':
         print("Not enough information, please try again?")
         socketio.emit('receiver', {'message': 'Not enough information, please try again?'})
@@ -683,7 +660,7 @@ def format_system_instructions_for_meeting(query_type_dict: dict, content_dict: 
     description = content_dict.get(
         'description') if content_dict else 'extra specifications, locations, and descriptions'
     start = content_dict.get(
-        'start') if content_dict else 'start time example format <2015-05-28T09:00:00-07:00>'
+        'start') if content_dict else 'start time default format <2015-05-28T09:00:00-07:00>'
     end = content_dict.get(
         'end') if content_dict else 'end time example format <2015-05-28T17:00:00-07:00>'
     attendees = content_dict.get('attendees',
@@ -700,9 +677,12 @@ def format_system_instructions_for_meeting(query_type_dict: dict, content_dict: 
     instructions = f"""
     You are an assistant that {query_type_dict.get('mode')}s a Google Meeting using a sample JSON.
     {'Update only the specified information from user message, leave the rest' if query_type_dict.get('mode') == 'update' else ''}
-    Ensure the summary and description are professional and informative. Use default start/end times if none are provided. If a start time is provided without an end time, set the end time to 30 minutes after the start time. 
+    Ensure the summary and description are professional and informative. Use default start/end times if none are provided. 
+    Default description should be the same as the summary/title.
+    Default start time is {datetime.now().strftime("%Y-%m-%dT%H:%M:%S") + "-04:00"}.
+    Set the end time to 30 minutes after the start time if no end time is provided. Use the default attendees if none are provided.
     If there isnt enough information to fill in the dictionary, return {{'error': 'invalid'}}. 
-    Current_time: {datetime.now()}
+    Current dateTime: {datetime.now()}
     event = {{
         "summary": "{summary}",
         "description": "{description}",
@@ -732,9 +712,9 @@ def gmeet_create():
 
     # No content dict bc create
     instructions = format_system_instructions_for_meeting(prompt_dict)
-    print(instructions)
     
     event_data = gpt_format_json(instructions, prompt_dict['prompt'])
+    print(event_data)
     if event_data.get('error'):
         print("Not enough information, Please try again")
         socketio.emit('receiver', {'message': 'Not enough information, Please try again'})
@@ -777,11 +757,9 @@ def gmeet_update():
 
     # Find keywords from prompt
     keywords = extract_keywords(user_prompt)
-    print(keywords)
 
     # Limit search to user
     meetings = Meets.query.filter_by(user_id=user_id).all()
-    print(Meets.query.filter_by(user_id=user_id).first().meet_id)
     if not meetings:
         print("Meetings not found in db. Try again?")
         socketio.emit('receiver', {'message': 'Meetings not found in db. Try again?'})
@@ -797,16 +775,14 @@ def gmeet_update():
         socketio.emit('receiver', {'message': 'No meetings found matching the provided keywords.'})
         return "No matching meeting found."
 
-    meet_id = find_meeting_id(user_prompt, filtered_meetings)
-    print(meet_id)
-    if meet_id == 'invalid':
+    mid = find_meeting_id(user_prompt, filtered_meetings)
+    if mid == 'invalid':
         print("Not enough information, please try again?")
         socketio.emit('receiver', {'message': 'Not enough information, please try again?'}) 
         return
     # query event from database
     # event = Events.query.filter_by(title=prompt_dict.get('title')).first()
-    meeting = Meets.query.filter_by(meet_id=meet_id.replace('\'', '')).first()
-    print(meeting)
+    meeting = Meets.query.filter_by(meet_id=mid.replace('\'', '')).first()
 
     # if not found in db
     if not meeting:
@@ -815,7 +791,6 @@ def gmeet_update():
         return
 
     meeting_content = meeting.serialize()
-    print(meeting_content)
 
     # backtick convention for splitting attendees column
     meeting_content['attendees'] = meeting_content['attendees'].split('`')
@@ -831,16 +806,22 @@ def gmeet_update():
 
     event = update_google_meet(g.service, meeting_id, event_data)
 
-    # meeting is current entry
-    meeting.summary = event_data.get('summary')
-    meeting.description = event_data.get('description')
-    meeting.start = event_data.get('start').get('dateTime')
-    meeting.end = event_data.get('end').get('dateTime')
-    meeting.meet_id = event.get('id')
-    meeting.attendees = json.dumps(event_data.get('attendees'))
-    meeting.meet_dictionary = json.dumps(event_data)
+    try:
+        # meeting is current entry
+        meeting.summary = event_data.get('summary')
+        meeting.description = event_data.get('description')
+        meeting.start = event_data.get('start').get('dateTime')
+        meeting.end = event_data.get('end').get('dateTime')
+        meeting.meet_id = event.get('id')
+        meeting.attendees = json.dumps(event_data.get('attendees'))
+        meeting.meet_dictionary = json.dumps(event_data)
 
-    db.session.commit()
+        db.session.commit()
+    except Exception as e:
+        db_failure_message = f"Error updating meeting in db. {e}"
+        print(db_failure_message, file=sys.stderr)
+        socketio.emit('receiver', {'message': db_failure_message})
+        
 
     event_description = f"""Meeting updated! \nEvent Details:\n
     \nTitle: {meeting.summary}
@@ -859,11 +840,9 @@ def gmeet_remove():
 
     # Find keywords from prompt
     keywords = extract_keywords(user_prompt)
-    print(keywords)
 
     # Limit search to user
     meetings = Meets.query.filter_by(user_id=user_id).all()
-    print(Meets.query.filter_by(user_id=user_id).first().meet_id)
     if not meetings:
         print("Meetings not found in db. Try again?")
         socketio.emit('receiver', {'message': 'Meetings not found in db. Try again?'})
@@ -880,7 +859,6 @@ def gmeet_remove():
         return "No matching meeting found."
 
     meet_id = find_meeting_id(user_prompt, filtered_meetings)
-    print(meet_id)
     if meet_id == 'invalid':
         print("Not enough information, please try again?")
         socketio.emit('receiver', {'message': 'Not enough information, please try again?'})
@@ -953,7 +931,7 @@ def format_system_instructions_for_gmail(query_type_dict: dict, content_dict: di
     instructions = f"""
     You are an assistant that {query_type_dict.get('mode', 'create')}s an email using a sample JSON format.
     Leave unspecified attributes unchanged. Ensure the subject and body are professional and informative.
-    Current_time: {datetime.now()}
+    Current dateTime: {datetime.now()}
     email = {{
         "from": "{sender}",
         "to": {recipient},
@@ -962,8 +940,6 @@ def format_system_instructions_for_gmail(query_type_dict: dict, content_dict: di
         "body": "{body}"
     }}
     """
-    print(type(instructions))
-    print(instructions)
     return instructions.strip()
 
 
@@ -1068,11 +1044,9 @@ def gmail_send():
 
     # Find keywords from prompt
     keywords = extract_keywords(user_prompt)
-    print(keywords)
 
     # Limit search to user
     emails = Emails.query.filter_by(user_id=user_id).all()
-    print(Emails.query.filter_by(user_id=user_id).first().email_id)
     if not emails:
         print("Emails not found in db. Try again?")
         return
@@ -1087,7 +1061,6 @@ def gmail_send():
         return "No matching emails found."
 
     email_id = find_email_id(user_prompt, filtered_emails)
-    print(email_id)
     if email_id == 'invalid':
         print("Not enough information, please try again?")
         return
