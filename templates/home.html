@@ -14,10 +14,23 @@
 </head>
 <body>
     <div class="content">
-        <div class="gradient-bg" id = "home">
+        <div class="bg" id = "home">
+            <div class="star-field">
+                <div class="layer"></div>
+                <div class="layer"></div>
+                <div class="layer"></div>
+            </div>
             <nav class="navbar navbar-expand-lg black">
                 <h1>Plan-it</h1>
-                <div class="collapse navbar-collapse d-flex justify-content-end" id="navbarNav">
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav mr-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('chat') }}">Chat</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+                        </li>
+                    </ul>
                 </div>
             </nav>
             <div class="hidden" id="intro-container">
@@ -26,10 +39,9 @@
                 <a href="{{url_for('login')}}" class="btn btn-primary ">
                     Get started
                 </a>
+                <a href="#info-container"><img src="../static/img/Arrow down.png" alt="arrow-down" id = "arrow"></a>
             </div>
-            <a href="#info"><img src="../static/img/Arrow down.png" alt="arrow-down" id = "arrow"></a>
-        </div>
-        <div class="off-white-bg" id = "info">
+        
             <div class = "hidden" id = "second-title">
                 <h1>What We Offer</h1>
             </div>
@@ -63,8 +75,9 @@
                         <p>Schedule and manage meetings efficiently, with automatic Google Meet link generation.</p>
                     </div>
                 </div>
-            </div>
         </div>
+    </div>
+       
     </div>
     <div class="footer-nav">
         <nav>
