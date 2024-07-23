@@ -12,6 +12,7 @@ from functools import wraps
 import socketio
 from dotenv import load_dotenv
 from openai import OpenAI
+import openai
 from db import db, Users, Events, Meets, Emails
 
 # Google Imports
@@ -54,8 +55,8 @@ client = OpenAI(
 
 SCOPES = ['https://www.googleapis.com/auth/calendar',
           'https://www.googleapis.com/auth/calendar.events',
-          'https://www.googleapis.com/auth/meetings.space.created',
-          'https://www.googleapis.com/auth/gmail.modify']
+          'https://www.googleapis.com/auth/meetings.space.created']
+GMAIL_SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
 
 
 @app.route('/')
@@ -205,12 +206,51 @@ def google_setup():
                 save_user_token(user_id, creds)
                 print("10", file=sys.stderr)
 
-        return build("calendar", "v3", credentials=creds)
-    if not hasattr(g, 'service'):
+        g.service = build("calendar", "v3", credentials=creds)
+        g.email = build("gmail", "v1", credentials=creds)
+        print(g.email)
+    if not hasattr(g, 'service') or not hasattr(g, 'email'):
         print("0", file=sys.stderr)
-        # global used throughout gcal, gmeet, and/or gmail
-        g.service = get_google_service()
+        get_google_service()
 
+
+def gmail_setup():
+    def get_google_service():
+        print("google_setup route hit", file=sys.stderr)
+        if hasattr(g, 'service'):
+            print("Service already exists", file=sys.stderr)
+            return
+        print("Service does not exist", file=sys.stderr)
+        user_id = session['user_id']  # Mock user
+        print("1", file=sys.stderr)
+        creds = get_user_token(user_id)
+        print("2", file=sys.stderr)
+
+        if not creds or not creds.valid:
+            print("3", file=sys.stderr)
+            if creds and creds.expired and creds.refresh_token:
+                print("4", file=sys.stderr)
+                creds.refresh(Request())
+                print("5", file=sys.stderr)
+                save_user_token(user_id, creds)
+                print("6", file=sys.stderr)
+            else:
+                print("7", file=sys.stderr)
+                flow = InstalledAppFlow.from_client_secrets_file(
+                    "credentials.json", SCOPES
+                )
+                print("8", file=sys.stderr)
+                creds = flow.run_local_server(port=8080)
+                print("9", file=sys.stderr)
+                save_user_token(user_id, creds)
+                print("10", file=sys.stderr)
+
+        g.service = build("calendar", "v3", credentials=creds)
+        g.email = build("gmail", "v1", credentials=creds)
+        print(g.email)
+    if not hasattr(g, 'service') or not hasattr(g, 'email'):
+        print("0", file=sys.stderr)
+        get_google_service()
 
 def determine_query_type(message: str):
     result = {"event_type": "unknown", "mode": "unknown"}  # Default result
@@ -339,6 +379,7 @@ def find_email_id(prompt, list):
     return email_id
 
 
+# noinspection PyPackageRequirements
 @socketio.on('user_prompt')
 def handle_user_prompt(prompt):
 
@@ -347,10 +388,9 @@ def handle_user_prompt(prompt):
     prompt_dictionary = determine_query_type(prompt)
 
     if prompt_dictionary == {"event_type": "unknown", "mode": "unknown"}:
-        print("We should send message to user saying we could not understand their prompt")
         socketio.emit('receiver',
-                      {'message': 'To use Plan-it, specify a service and an action. '
-                                  'Ex: \'Calendar\' and \'Create\''})
+                      {'message': 'To use Plan-it, specify a service, action, and the corresponding details. '
+                                  'Ex: I want to create an appointment in my calendar for tomorrow at 9am. '})
         return
 
     prompt_dictionary['prompt'] = prompt
@@ -369,7 +409,17 @@ def handle_user_prompt(prompt):
 
         # Send success message to chat reciever-end
         print(f"Event Type: {event_type}, Mode: {mode}")
-        socketio.emit('receiver', {'message': f"Event Type: {event_type}, Mode: {mode}"})
+        user_mode = mode.capitalize()
+        if mode != "send":
+            user_mode = mode[:-1]
+        if event_type == "gmeet":
+            user_event = "Google Meeting"
+        elif event_type == "gcal":
+            user_event = "Google Calendar event"
+        else:
+            user_event = "Gmail draft"
+
+        socketio.emit('receiver', {'message': f"{user_mode}ing your {user_event}."})
         success_message = eval(f"{event_type}_{mode}()")
         
         return success_message
@@ -431,7 +481,7 @@ def format_system_instructions_for_event(query_type_dict: dict, content_dict: di
     You are an assistant that {query_type_dict.get('mode')}s a Google Calendar event using a sample JSON..
     {'Update only the specified information from user message, leave the rest' if query_type_dict.get('mode') == 'update' else ''}
     Ensure the summary and description are professional and informative. Use default start/end times if none are provided.
-    If a start time is provided without an end time, set the end time to 30 minutes after the start time. If there isnt enough 
+    If a start time is provided without an end time, set the end time to 60 minutes after the start time. If there isnt enough 
     information to fill the dictionary, return {{'error': 'invalid'}}
     Current_time: {datetime.now()}
 
@@ -929,7 +979,7 @@ def get_authenticated_user_email(service):
 
 
 def email_json_to_raw(email_json):
-    from_field = email_json['from']  # Assuming `from_list` has a single email
+    from_field = get_authenticated_user_email(g.email)  # Assuming `from_list` has a single email
     to_field = email_json['to']
     cc_field = ', '.join(email_json['cc']) if email_json['cc'] else ''
 
@@ -1019,16 +1069,16 @@ def delete_gmail_draft(service, draft_id):
         print(f"An error occurred: {e}")
 
 
-# @socketio('approval-request-response')
+@socketio.on('approval-request-response')
 def handle_approval_response(response):
     status = response.get('status')
     email_json = response.get('email')
     if email_json and (status == 'save' or status == 'send'):
         email_raw = email_json_to_raw(email_json)
-        draft = create_gmail_draft(g.service, email_raw)
+        draft = create_gmail_draft(g.email, email_raw)
         draft_id = draft.get('id')
         if status == 'send':
-            send_gmail_draft(g.service, draft_id)
+            send_gmail_draft(g.email, draft_id)
             print("Gmail draft created successfully")
         elif status == 'save':
             # add stuff here for other fields
@@ -1039,7 +1089,7 @@ def handle_approval_response(response):
                 to=email_json['to'],
 
                 user_id=session['user_id'],
-                sender=get_authenticated_user_email(g.service),
+                sender=get_authenticated_user_email(g.email),
                 cc=email_json.get('cc'),
                 email_id=draft.get('id'),
                 email_dictionary=json.dumps(email_json),
@@ -1054,7 +1104,7 @@ def gmail_create():
     prompt_dict = session.get('prompt_dictionary')
     prompt = prompt_dict.get('prompt')
 
-    content_dict = {'from': f"{get_authenticated_user_email(g.service)}"}
+    content_dict = {'from': f"{get_authenticated_user_email(g.email)}"}
     instructions = format_system_instructions_for_gmail(
         prompt_dict, content_dict)
 
@@ -1101,7 +1151,7 @@ def gmail_send():
     print(email_to_send)
 
     if email_to_send:
-        send_gmail_draft(g.service, email_to_send.email_id)
+        send_gmail_draft(g.email, email_to_send.email_id)
 
         # remove from db bc its sent, so you can't edit it again anyway
         db.session.delete(email_to_send)
@@ -1145,7 +1195,7 @@ def gmail_delete():
     if draft_to_delete:
         # delete from our db
         draft_id = draft_to_delete.email_id
-        delete_gmail_draft(g.gmail_service, draft_id)
+        delete_gmail_draft(g.email, draft_id)
         db.session.delete(draft_to_delete)
         db.session.commit()
 

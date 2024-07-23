@@ -1,5 +1,4 @@
-const socket = io();
-
+// const socket = io();
 // General button handler
 const generalButtonHandler = function(status) {
     const toDiv = document.querySelector('#to-field').value;
@@ -99,6 +98,7 @@ function clearEmailContainers() {
         chatBox.removeChild(chatBox.firstChild);
     }
 }
+
 
 // Socket event listener
 socket.on('request-approval', (email_json) => {
