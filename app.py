@@ -461,6 +461,7 @@ def gcal_create():
 
     if hasattr(format_instruction, 'error'):
         print("Not enough info. Please try again")
+        socketio.emit('receiver', {'message': 'Not enough information. Please try again'})
         return 
     
 
@@ -782,6 +783,7 @@ def gmeet_update():
     print(Meets.query.filter_by(user_id=user_id).first().meet_id)
     if not meetings:
         print("Meetings not found in db. Try again?")
+        socketio.emit('receiver', {'message': 'Meetings not found in db. Try again?'})
         return
 
     # Filter events then send to API to find id
@@ -791,12 +793,14 @@ def gmeet_update():
 
     if not filtered_meetings:
         print("No meetings found matching the provided keywords.", file=sys.stderr)
+        socketio.emit('receiver', {'message': 'No meetings found matching the provided keywords.'})
         return "No matching meeting found."
 
     meet_id = find_meeting_id(user_prompt, filtered_meetings)
     print(meet_id)
     if meet_id == 'invalid':
         print("Not enough information, please try again?")
+        socketio.emit('receiver', {'message': 'Not enough information, please try again?'}) 
         return
     # query event from database
     # event = Events.query.filter_by(title=prompt_dict.get('title')).first()
@@ -806,6 +810,7 @@ def gmeet_update():
     # if not found in db
     if not meeting:
         print("Meeting not found in db. Try again?")
+        socketio.emit('receiver', {'message': 'Meeting not found in db. Try again?'})
         return
 
     meeting_content = meeting.serialize()
@@ -860,6 +865,7 @@ def gmeet_remove():
     print(Meets.query.filter_by(user_id=user_id).first().meet_id)
     if not meetings:
         print("Meetings not found in db. Try again?")
+        socketio.emit('receiver', {'message': 'Meetings not found in db. Try again?'})
         return
 
     # Filter events then send to API to find id
@@ -869,12 +875,14 @@ def gmeet_remove():
 
     if not filtered_meetings:
         print("No meetings found matching the provided keywords.", file=sys.stderr)
+        socketio.emit('receiver', {'message': 'No meetings found matching the provided keywords.'})
         return "No matching meeting found."
 
     meet_id = find_meeting_id(user_prompt, filtered_meetings)
     print(meet_id)
     if meet_id == 'invalid':
         print("Not enough information, please try again?")
+        socketio.emit('receiver', {'message': 'Not enough information, please try again?'})
         return
     # query event from database
     # event = Events.query.filter_by(title=prompt_dict.get('title')).first()
