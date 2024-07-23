@@ -178,3 +178,5 @@ class Emails(db.Model):
             "email_dictionary": self.email_dictionary
 
         }
+
+
