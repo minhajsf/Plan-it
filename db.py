@@ -178,3 +178,34 @@ class Emails(db.Model):
             "email_dictionary": self.email_dictionary
 
         }
+    
+class History(db.Model):
+    """
+    Table for History
+    """
+
+    __tablename__ = "History"
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer)
+    user_prompt = db.Column(db.String, nullable=False)
+    chat_response = db.Column(db.String, nullable=False)
+
+    def __init__(self, **kwargs):
+        """
+        Initializes Event object.
+        """
+        self.user_id = kwargs.get("user_id", "")
+        self.user_prompt = kwargs.get("user_prompt", "")
+        self.chat_response = kwargs.get("chat_response", "")
+
+    def serialize(self):
+        """
+        Serializes an Event object.
+        """
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "user_prompt": self.user_prompt,
+            "chat_response": self.chat_response,
+        }
+
