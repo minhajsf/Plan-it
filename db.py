@@ -178,8 +178,6 @@ class Emails(db.Model):
             "email_dictionary": self.email_dictionary
 
         }
-<<<<<<< HEAD
-    
 class History(db.Model):
     """
     Table for History
@@ -209,7 +207,4 @@ class History(db.Model):
             "user_prompt": self.user_prompt,
             "chat_response": self.chat_response,
         }
-=======
-
->>>>>>> main
 

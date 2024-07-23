@@ -1034,12 +1034,9 @@ def handle_approval_response(response):
             send_gmail_draft(g.service, draft_id)
             print("Gmail draft created successfully")
         elif status == 'save':
-<<<<<<< HEAD
             new_history = History(user_id=session['user_id'], user_prompt=session['prompt_dictionary']['prompt'], chat_response="Email Created!")
-=======
-            # add stuff here for other fields
 
->>>>>>> main
+            # add stuff here for other fields
             newly_drafted_email = Emails(
                 subject=email_json['subject'],
                 body=email_json['body'],
