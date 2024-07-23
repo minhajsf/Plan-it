@@ -213,43 +213,39 @@ def google_setup():
 
 
 def determine_query_type(message: str):
+    result = {"event_type": "unknown", "mode": "unknown"}  # Default result
+
     try:
-        print("determine_query_type route hit", file=sys.stderr)
-        # Ideally we remove the creation part and make it global itf
-        client = OpenAI(api_key=OPENAI_API_KEY)
-        # Make API request
         completion = client.chat.completions.create(
             model="gpt-3.5-turbo",
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system",
                  "content": """You are an assistant that determines if a message is related to either Google Calendar,
-                            Google Meet, or Gmail. Return a json response as {'event_type': , 
-
-                            'mode': } where type is gcal, gmeet, or gmail. If the type is gcal or gmeet, the mode
-                            can be create, update, or remove. For email, the mode can be create, update, or send. 
-                            """},
-
+                             Google Meet, or Gmail. Return a json response as {'event_type': , 
+                             'mode': } where type is gcal, gmeet, or gmail. If the type is gcal or gmeet, the mode
+                             can be create, update, or remove. For email, the mode can be create, remove or send.
+                             If you are not sure, return <{"event_type": "unknown", "mode": "unknown"}> without <>
+                             exactly.
+                             """},
                 {"role": "user", "content": f"The message is the following: {message}"}
             ]
         )
 
-        response = completion.choices[0].message.content
+        # Check if choices are present and valid
+        if completion.choices and len(completion.choices) > 0:
+            response_content = completion.choices[0].message.content
+            result = json.loads(response_content)
 
-        # Ensure the response is a JSON string
-        response = response[response.index(
-            "{"):len(response) - response[::-1].index("}")]
-        # Fixes the capitalization of True in the response
-        response = re.sub(r"\btrue\b", "True", response)
-        # Extract and parse the response
-        response = json.loads(response)
-
-        # Error handling -- can be removed in prod!
-
-        return response  # response is dict with keys event_type, mode, and title
+    except json.JSONDecodeError as e:
+        print(f"Error parsing GPT response: {e}", file=sys.stderr)
+    except openai.AuthenticationError as e:
+        # Handle authentication error
+        print(f"Failed to connect to OpenAI API: {e}", file=sys.stderr)
     except Exception as e:
-        print(f"Error processing message: {e}")
-        return {"event_type": "unknown", "mode": "unknown"}
+        print(f"Unexpected error: {e}", file=sys.stderr)
+
+    return result
 
 
 def gpt_format_json(system_instructions: str, input_string: str):
@@ -349,6 +345,14 @@ def handle_user_prompt(prompt):
     # add in prompt to dictionary directly
     # saves time on the gpt call in determine_query_type
     prompt_dictionary = determine_query_type(prompt)
+
+    if prompt_dictionary == {"event_type": "unknown", "mode": "unknown"}:
+        print("We should send message to user saying we could not understand their prompt")
+        socketio.emit('receiver',
+                      {'message': 'To use Plan-it, specify a service and an action. '
+                                  'Ex: \'Calendar\' and \'Create\''})
+        return
+
     prompt_dictionary['prompt'] = prompt
 
     # make the prompt_dictionary a session variable (global to the flask session)
