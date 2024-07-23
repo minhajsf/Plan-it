@@ -365,9 +365,10 @@ def handle_user_prompt(prompt):
 
         # Send success message to chat reciever-end
         print(f"Event Type: {event_type}, Mode: {mode}")
-        socketio.emit('receiver', {'message': f"Event Type: {event_type}, Mode: {mode}"})
+        socketio.emit(
+            'receiver', {'message': f"Event Type: {event_type}, Mode: {mode}"})
         success_message = eval(f"{event_type}_{mode}()")
-        
+
         return success_message
 
     except Exception as e:
@@ -461,10 +462,9 @@ def gcal_create():
 
     if hasattr(format_instruction, 'error'):
         print("Not enough info. Please try again")
-        socketio.emit('receiver', {'message': 'Not enough information. Please try again'})
-        return 
-    
-
+        socketio.emit(
+            'receiver', {'message': 'Not enough information. Please try again'})
+        return
 
     # GPT response as JSON
     event_data = gpt_format_json(format_instruction, prompt_dict['prompt'])
@@ -508,7 +508,8 @@ def gcal_update():
     print(Events.query.filter_by(user_id=user_id).first().event_id)
     if not events:
         print("Events not found in db. Try again?")
-        socketio.emit('receiver', {'message': 'Events not found in db. Try again?'})
+        socketio.emit(
+            'receiver', {'message': 'Events not found in db. Try again?'})
         return
 
     # Filter events then send to API to find id
@@ -525,11 +526,12 @@ def gcal_update():
     print(event_id)
     if event_id == 'invalid':
         print("Not enough information, please try again?")
-        socketio.emit('receiver', {'message': 'Not enough information, please try again?'})
+        socketio.emit(
+            'receiver', {'message': 'Not enough information, please try again?'})
         return
     # query event from database
 
-    #event = Events.query.filter_by(title=prompt_dict.get('title')).first()
+    # event = Events.query.filter_by(title=prompt_dict.get('title')).first()
     event = Events.query.filter_by(event_id=event_id.replace('\'', '')).first()
 
     print(event)
@@ -537,7 +539,8 @@ def gcal_update():
     # if not found in db
     if not event:
         print("Event not found in db. Try again?")
-        socketio.emit('receiver', {'message': 'Event not found in db. Try again?'})
+        socketio.emit(
+            'receiver', {'message': 'Event not found in db. Try again?'})
         return
 
     event_content = event.serialize()
@@ -587,7 +590,8 @@ def gcal_remove():
     print(Events.query.filter_by(user_id=user_id).first().event_id)
     if not events:
         print("Events not found in db. Try again?")
-        socketio.emit('receiver', {'message': 'Events not found in db. Try again?'})
+        socketio.emit(
+            'receiver', {'message': 'Events not found in db. Try again?'})
         return
 
     # Filter events then send to API to find id
@@ -604,11 +608,12 @@ def gcal_remove():
     print(event_id)
     if event_id == 'invalid':
         print("Not enough information, please try again?")
-        socketio.emit('receiver', {'message': 'Not enough information, please try again?'})
+        socketio.emit(
+            'receiver', {'message': 'Not enough information, please try again?'})
         return
     # query event from database
 
-    #event = Events.query.filter_by(title=prompt_dict.get('title')).first()
+    # event = Events.query.filter_by(title=prompt_dict.get('title')).first()
     event = Events.query.filter_by(event_id=event_id.replace('\'', '')).first()
 
     print(event)
@@ -631,8 +636,6 @@ def gcal_remove():
     socketio.emit('receiver', {'message': event_description})
 
     return event_description
-
-    
 
 
 #
@@ -732,11 +735,12 @@ def gmeet_create():
     # No content dict bc create
     instructions = format_system_instructions_for_meeting(prompt_dict)
     print(instructions)
-    
+
     event_data = gpt_format_json(instructions, prompt_dict['prompt'])
     if event_data.get('error'):
         print("Not enough information, Please try again")
-        socketio.emit('receiver', {'message': 'Not enough information, Please try again'})
+        socketio.emit(
+            'receiver', {'message': 'Not enough information, Please try again'})
         return
 
     print(event_data)
@@ -767,8 +771,8 @@ def gmeet_create():
     print("Meeting has been created successfully.")
 
     socketio.emit('receiver', {'message': event_description})
-    
-    
+
+
 def gmeet_update():
     prompt_dict = session.get('prompt_dictionary')
     user_prompt = session['prompt_dictionary']['prompt']
@@ -783,7 +787,8 @@ def gmeet_update():
     print(Meets.query.filter_by(user_id=user_id).first().meet_id)
     if not meetings:
         print("Meetings not found in db. Try again?")
-        socketio.emit('receiver', {'message': 'Meetings not found in db. Try again?'})
+        socketio.emit(
+            'receiver', {'message': 'Meetings not found in db. Try again?'})
         return
 
     # Filter events then send to API to find id
@@ -793,14 +798,16 @@ def gmeet_update():
 
     if not filtered_meetings:
         print("No meetings found matching the provided keywords.", file=sys.stderr)
-        socketio.emit('receiver', {'message': 'No meetings found matching the provided keywords.'})
+        socketio.emit(
+            'receiver', {'message': 'No meetings found matching the provided keywords.'})
         return "No matching meeting found."
 
     meet_id = find_meeting_id(user_prompt, filtered_meetings)
     print(meet_id)
     if meet_id == 'invalid':
         print("Not enough information, please try again?")
-        socketio.emit('receiver', {'message': 'Not enough information, please try again?'}) 
+        socketio.emit(
+            'receiver', {'message': 'Not enough information, please try again?'})
         return
     # query event from database
     # event = Events.query.filter_by(title=prompt_dict.get('title')).first()
@@ -810,7 +817,8 @@ def gmeet_update():
     # if not found in db
     if not meeting:
         print("Meeting not found in db. Try again?")
-        socketio.emit('receiver', {'message': 'Meeting not found in db. Try again?'})
+        socketio.emit(
+            'receiver', {'message': 'Meeting not found in db. Try again?'})
         return
 
     meeting_content = meeting.serialize()
@@ -852,6 +860,7 @@ def gmeet_update():
 
     socketio.emit('receiver', {'message': event_description})
 
+
 def gmeet_remove():
     user_prompt = session['prompt_dictionary']['prompt']
     user_id = session['user_id']
@@ -865,7 +874,8 @@ def gmeet_remove():
     print(Meets.query.filter_by(user_id=user_id).first().meet_id)
     if not meetings:
         print("Meetings not found in db. Try again?")
-        socketio.emit('receiver', {'message': 'Meetings not found in db. Try again?'})
+        socketio.emit(
+            'receiver', {'message': 'Meetings not found in db. Try again?'})
         return
 
     # Filter events then send to API to find id
@@ -875,14 +885,16 @@ def gmeet_remove():
 
     if not filtered_meetings:
         print("No meetings found matching the provided keywords.", file=sys.stderr)
-        socketio.emit('receiver', {'message': 'No meetings found matching the provided keywords.'})
+        socketio.emit(
+            'receiver', {'message': 'No meetings found matching the provided keywords.'})
         return "No matching meeting found."
 
     meet_id = find_meeting_id(user_prompt, filtered_meetings)
     print(meet_id)
     if meet_id == 'invalid':
         print("Not enough information, please try again?")
-        socketio.emit('receiver', {'message': 'Not enough information, please try again?'})
+        socketio.emit(
+            'receiver', {'message': 'Not enough information, please try again?'})
         return
     # query event from database
     # event = Events.query.filter_by(title=prompt_dict.get('title')).first()
@@ -896,7 +908,6 @@ def gmeet_remove():
     # remove from our db
     db.session.delete(meeting_to_remove)
     db.session.commit()
-
 
     event_description = f"""Meeting removed! \nEvent Details:\n
     \nTitle: {meeting_to_remove.summary}
@@ -980,7 +991,6 @@ def create_gmail_draft(service, message_body_raw):
         return None
 
 
-
 def update_gmail_draft(service, draft_id, updated_message_body_raw):
     try:
         message = {
@@ -994,6 +1004,7 @@ def update_gmail_draft(service, draft_id, updated_message_body_raw):
     except Exception as e:
         print(f"An error occurred: {e}")
         return None
+
 
 def send_gmail_draft(service, draft_id):
     try:
