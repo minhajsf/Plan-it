@@ -61,7 +61,7 @@ if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
 
     // Start recording
     startButton.addEventListener('click', () => {
-        response = ""; // Reset the response for a new recording session
+        response = ""; 
         recognition.start();
         startButton.style.display = 'none';
         stopButton.style.display = 'inline-block';
@@ -92,6 +92,8 @@ if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
 // Handle socket connection
 socket.on('connect', () => {
     console.log('Connected to server');
+    const chatBox = document.getElementById('chatBox');
+    chatBox.scrollTop = chatBox.scrollHeight;
 });
 
 // Handle socket disconnection
@@ -103,12 +105,14 @@ socket.on('disconnect', () => {
 socket.on('server_response', (response) => {
     console.log('Server:', response);
     appendMessage(response, 'server');
+    
 });
 
 // GOOGLE CALENDAR EVENTS
 socket.on('receiver', (data) => {
     const message = data.message;
     appendMessage(message, 'server');
+   
 });
 
 // Handle redirection from server
