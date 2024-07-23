@@ -35,7 +35,7 @@ html, body {
 }
     */
 .bg {
-    background-image: url(../img/steal-purple.png);
+    background-image: url(../img/steal.png);
     background-attachment: fixed;
     background-size: cover;
     height: 100%;
