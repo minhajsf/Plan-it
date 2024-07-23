@@ -45,12 +45,19 @@
                         <img src="{{url_for('static', filename='img/Help circle.png')}}" alt="Help" class="icon">
                     </button>
                     <div class="popup help" id="help">
-                        <div class="popup-header">Help
+                        <div class="popup-header">Not sure what to say? 
                             <button data-close-button class="close-button">&times;</button>
                         </div>
                         <hr>
                         <div class="popup-body">
-                            <p>need help? skill issue</p>
+                            <p><b>Google Calendar Example</b></p>
+                            <p>"I have a networking meeting to attend tomorrow at 5pm, please add it to my calendar"</p>
+                            <hr>
+                            <p><b>Google Meeting Example</b></p>
+                            <p>"I would like to set up a google meeting to discuss xyz, please add example@gmail.com as an attendee"</p>
+                            <hr>
+                            <p><b>Google Email Example</b></p>
+                            <p>"Please send an email to example@gmail.com to confirm our meeting scheduled for tomorrow at 5pm"</p>
                         </div>
                     </div>
                     
@@ -83,8 +90,8 @@
                         <div class="bar"></div>
                         <div class="bar"></div>
                     </div>
-                    <img id="startButton" src="{{ url_for('static', filename='img/mic.png')}}" alt="Start Recording">
-                    <img id="stopButton" src="{{ url_for('static', filename='img/mic.png')}}" alt="Stop Recording">
+                    <img id="startButton" src="{{ url_for('static', filename='img/Mic.png')}}" alt="Start Recording">
+                    <img id="stopButton" src="{{ url_for('static', filename='img/Mic.png')}}" alt="Stop Recording">
                 </div>
                 <p id="outputText"></p>
             </div>
