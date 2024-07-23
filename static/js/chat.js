@@ -105,13 +105,9 @@ socket.on('server_response', (response) => {
     appendMessage(response, 'server');
 });
 
-socket.on('meeting_update', (data) => {
-    const message = data.message || 'Meeting updated successfully';
-    appendMessage(message, 'server');
-});
-
-socket.on('meeting_created', (data) => {
-    const message = data.message || 'Meeting created successfully';
+// GOOGLE CALENDAR EVENTS
+socket.on('receiver', (data) => {
+    const message = data.message;
     appendMessage(message, 'server');
 });
 
@@ -152,17 +148,21 @@ function appendMessage(message, sender) {
     chatHistory(); 
 }
 
+
 // saving chat history
 function chatHistory() {
     let chatHistory = chatBox.innerHTML;
+
     localStorage.setItem('chatHistory', chatHistory);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    
     const chatHistory = localStorage.getItem('chatHistory');
     if (chatHistory) {
         chatBox.innerHTML = chatHistory;
     }
+    
     startButton.style.display = 'inline-block';
     stopButton.style.display = 'none';
     recordingIndicator.style.display = 'none';
