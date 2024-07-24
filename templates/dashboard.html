@@ -95,9 +95,9 @@
                 {% if emails %}
                     {% for email in emails %}
                     <div class="card">
-                        <div class="card-title">{{ draft.subject }}</div>
-                        <div class="card-details">To: {{ draft.to }}</div>
-                        <div class="card-details">Body: {{ draft.subject[:20] }}...</div>
+                        <div class="card-title">{{ email.subject }}</div>
+                        <div class="card-details">To: {{ email.to }}</div>
+                        <div class="card-details">Body: {{ email.subject[:20] }}...</div>
                         <div class="card-details">Link: <a href="{{ email.link }}">View draft in GMail</a></div>
                     </div>
                     {% endfor %}

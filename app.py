@@ -428,6 +428,7 @@ def handle_user_prompt(prompt):
               GMeet -> (Create, Update, or Remove), or Gmail -> (Create, Update, Send, and Delete)"""
         print("Exception thrown in handle_user_prompt at bottom try-catch",
               file=sys.stderr)
+        socketio.emit('receiver', {'message': failure_message})
         print(f"Error: {e}", file=sys.stderr)
         return failure_message
 
