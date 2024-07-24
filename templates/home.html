@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang = "en">
 <head>
     <title>Home</title>
     <meta charset="UTF-8">
@@ -8,28 +8,43 @@
     <script src="../static/js/home.js" defer></script>
     <script src="../static/js/flash.js"></script>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="content">
-        <div class="gradient-bg" id = "home">
+        <div class="bg" id = "home">
+            <div class="star-field">
+                <div class="layer"></div>
+                <div class="layer"></div>
+                <div class="layer"></div>
+            </div>
             <nav class="navbar navbar-expand-lg black">
                 <h1>Plan-it</h1>
-                <div class="collapse navbar-collapse d-flex justify-content-end" id="navbarNav">
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav mr-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('chat') }}">Chat</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+                        </li>
+                    </ul>
                 </div>
             </nav>
             <div class="hidden" id="intro-container">
                 <h1>Welcome to Plan-it</h1>
                 <p>Blast off into a new era of productivity with Plan-it. Leveraging the power of Google's API, effortlessly create events, send emails, and schedule meetings with stellar efficiency.</p>
-                <a href="{{url_for('login')}}" class="btn btn-primary ">
+                <a href="{{url_for('login')}}" class="btn btn-primary btn-lg text-center ">
                     Get started
                 </a>
+                <a href="#info-container"><img src="../static/img/Arrow down.png" alt="arrow-down" id = "arrow"></a>
             </div>
-            <a href="#info"><img src="../static/img/Arrow down.png" alt="arrow-down" id = "arrow"></a>
-        </div>
-        <div class="off-white-bg" id = "info">
+        
             <div class = "hidden" id = "second-title">
                 <h1>What We Offer</h1>
             </div>
@@ -63,8 +78,9 @@
                         <p>Schedule and manage meetings efficiently, with automatic Google Meet link generation.</p>
                     </div>
                 </div>
-            </div>
         </div>
+    </div>
+       
     </div>
     <div class="footer-nav">
         <nav>

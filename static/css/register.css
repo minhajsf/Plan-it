@@ -17,6 +17,12 @@ h1 {
     padding: 10px;
 
 }
+.navbar, .navbar a{
+    color: white;
+}
+.nav-link {
+    margin-left: 30px;
+}
 .form-control {
     background: transparent;
     border: none;

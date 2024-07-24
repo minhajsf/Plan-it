@@ -18,7 +18,16 @@
             {% endfor %}
         {% endif %}
     {% endwith %}
-    <h1>Plan-it</h1>
+    <nav class="navbar navbar-expand-lg black">
+        <h1>Plan-it</h1>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('home') }}">Home</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
     <div class="container mt-5">
         <div id="register-form" class="form-section">
             <h2>Register</h2>
