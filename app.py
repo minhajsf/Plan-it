@@ -130,7 +130,14 @@ def chat():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    return render_template('dashboard.html')
+    try:
+        events_list = Events.query.filter_by(user_id=session['user_id']).order_by(Events.start).limit(10).all()
+        meets_list = Meets.query.filter_by(user_id=session['user_id']).order_by(Meets.start).limit(10).all()
+        emails_list = Emails.query.filter_by(user_id=session['user_id']).limit(10).all()
+    except Exception as e:
+        print(f"Error fetching data from database: {e}", file=sys.stderr)
+
+    return render_template('dashboard.html', events=events_list, meets=meets_list, emails=emails_list)
 
 
 @app.route('/voice')
@@ -511,18 +518,24 @@ def gcal_create():
 
     event = create_event(g.service, event_data)
 
-    new_event = Events(
-        user_id=session['user_id'],
-        title=event_data.get("summary"),
-        description=event_data.get("description"),
-        start=event_data.get("start").get("dateTime"),
-        end=event_data.get("end").get("dateTime"),
-        event_id=event.get("id"),
-        event_dictionary=json.dumps(event_data)
-    )
+    try:
+        new_event = Events(
+            user_id=session['user_id'],
+            title=event_data.get("summary"),
+            description=event_data.get("description"),
+            start=event_data.get("start").get("dateTime"),
+            end=event_data.get("end").get("dateTime"),
+            event_id=event.get("id"),
+            event_dictionary=json.dumps(event_data),
+            link=event.get("htmlLink")
+        )
 
-    db.session.add(new_event)
-    db.session.commit()
+        db.session.add(new_event)
+        db.session.commit()
+    except Exception as e:
+        db_failure_message = f"Error creating event in db. {e}"
+        print(db_failure_message, file=sys.stderr)
+        socketio.emit('receiver', {'message': db_failure_message})
 
     event_description = f"""Event Created! Check your Google Calendar to confirm!\nEvent Details:\n
     Title: {new_event.title}
@@ -590,16 +603,22 @@ def gcal_update():
 
     updated_event = update_event(g.service, event_id, event_data)
 
-    # event is current entry
-    # update the event attributes in the database
-    event.title = event_data.get('summary')
-    event.description = event_data.get('description')
-    event.start = event_data.get('start').get('dateTime')
-    event.end = event_data.get('end').get('dateTime')
-    event.event_id = updated_event.get('id')
-    event.event_dictionary = json.dumps(event_data)
+    try:
+        # event is current entry
+        # update the event attributes in the database
+        event.title = event_data.get('summary')
+        event.description = event_data.get('description')
+        event.start = event_data.get('start').get('dateTime')
+        event.end = event_data.get('end').get('dateTime')
+        event.event_id = updated_event.get('id')
+        event.event_dictionary = json.dumps(event_data)
+        event.link = updated_event.get('htmlLink')
 
-    db.session.commit()
+        db.session.commit()
+    except Exception as e:
+        db_failure_message = f"Error updating event in db. {e}"
+        print(db_failure_message, file=sys.stderr)
+        socketio.emit('receiver', {'message': db_failure_message})
 
     event_description = f"""Event Updated! Check your Google Calendar to confirm!\nEvent Details:\n
     Title: {event.title}
@@ -647,7 +666,6 @@ def gcal_remove():
 
     print(event)
 
-    # remove it from calendar
     remove_event(g.service, event.event_id)
 
     event_description = f"""Event Deleted! \nEvent Details:\n
@@ -657,9 +675,14 @@ def gcal_remove():
     \nEnd Time: {event.end}
     """
 
-    # remove from our db
-    db.session.delete(event)
-    db.session.commit()
+    try:
+        # remove from our db
+        db.session.delete(event)
+        db.session.commit()
+    except Exception as e:
+        db_failure_message = f"Error deleting event in db. {e}"
+        print(db_failure_message, file=sys.stderr)
+        socketio.emit('receiver', {'message': db_failure_message})
 
     print("Event has been deleted successfully.")
     socketio.emit('receiver', {'message': event_description})
@@ -781,19 +804,25 @@ def gmeet_create():
     event = create_google_meet(g.service, event_data)
 
     # Create new Meet for our db
-    new_meeting = Meets(
-        user_id=session['user_id'],
-        summary=event_data.get('summary'),
-        description=event_data.get('description'),
-        start=event_data.get('start').get('dateTime'),
-        end=event_data.get('end').get('dateTime'),
-        meet_id=event.get('id'),
-        attendees=json.dumps((event_data.get('attendees'))),
-        meet_dictionary=json.dumps(event_data)
-    )
+    try:
+        new_meeting = Meets(
+            user_id=session['user_id'],
+            summary=event_data.get('summary'),
+            description=event_data.get('description'),
+            start=event_data.get('start').get('dateTime'),
+            end=event_data.get('end').get('dateTime'),
+            meet_id=event.get('id'),
+            attendees=json.dumps((event_data.get('attendees'))),
+            meet_dictionary=json.dumps(event_data),
+            link=event.get('htmlLink')
+        )
 
-    db.session.add(new_meeting)
-    db.session.commit()
+        db.session.add(new_meeting)
+        db.session.commit()
+    except Exception as e:
+        db_failure_message = f"Error creating meeting in db. {e}"
+        print(db_failure_message, file=sys.stderr)
+        socketio.emit('receiver', {'message': db_failure_message})
 
     event_description = f"""Meeting created! \nEvent Details:\n
     \nTitle: {new_meeting.summary}
@@ -871,6 +900,7 @@ def gmeet_update():
         meeting.meet_id = event.get('id')
         meeting.attendees = json.dumps(event_data.get('attendees'))
         meeting.meet_dictionary = json.dumps(event_data)
+        meeting.link = event.get('htmlLink')
 
         db.session.commit()
     except Exception as e:
@@ -928,9 +958,14 @@ def gmeet_remove():
     # remove it from calendar
     delete_google_meet(g.service, meeting_to_remove.meet_id)
 
-    # remove from our db
-    db.session.delete(meeting_to_remove)
-    db.session.commit()
+    try:
+        # remove from our db
+        db.session.delete(meeting_to_remove)
+        db.session.commit()
+    except Exception as e:
+        db_failure_message = f"Error deleting meeting in db. {e}"
+        print(db_failure_message, file=sys.stderr)
+        socketio.emit('receiver', {'message': db_failure_message})
 
 
     event_description = f"""Meeting removed! \nEvent Details:\n
@@ -1061,20 +1096,26 @@ def handle_approval_response(response):
             print("Gmail draft created successfully")
         elif status == 'save':
             # add stuff here for other fields
+            try:
+                newly_drafted_email = Emails(
+                    subject=email_json['subject'],
+                    body=email_json['body'],
+                    to=email_json['to'],
 
-            newly_drafted_email = Emails(
-                subject=email_json['subject'],
-                body=email_json['body'],
-                to=email_json['to'],
+                    user_id=session['user_id'],
+                    sender=get_authenticated_user_email(g.service),
+                    cc=email_json.get('cc'),
+                    email_id=draft.get('id'),
+                    email_dictionary=json.dumps(email_json),
+                    link=f"https://mail.google.com/mail/u/0/#drafts?compose={draft.get('id')}"
+                )
+                db.session.add(newly_drafted_email)
+                db.session.commit()
+            except Exception as e:
+                db_failure_message = f"Error saving draft in db. {e}"
+                print(db_failure_message, file=sys.stderr)
+                socketio.emit('receiver', {'message': db_failure_message})
 
-                user_id=session['user_id'],
-                sender=get_authenticated_user_email(g.email),
-                cc=email_json.get('cc'),
-                email_id=draft.get('id'),
-                email_dictionary=json.dumps(email_json),
-            )
-            db.session.add(newly_drafted_email)
-            db.session.commit()
     # technically there is a 'quit' but it's not anywhere, so we just ignore the data
 
 
@@ -1120,6 +1161,7 @@ def gmail_send():
     if email_id == 'invalid':
         print("Not enough information, please try again?")
         return
+    
     # query event from database
     # event = Events.query.filter_by(title=prompt_dict.get('title')).first()
     email_to_send = Emails.query.filter_by(
@@ -1129,9 +1171,14 @@ def gmail_send():
     if email_to_send:
         send_gmail_draft(g.email, email_to_send.email_id)
 
-        # remove from db bc its sent, so you can't edit it again anyway
-        db.session.delete(email_to_send)
-        db.session.commit()
+        try:
+            # remove from db bc its sent, so you can't edit it again anyway
+            db.session.delete(email_to_send)
+            db.session.commit()
+        except Exception as e:
+            db_failure_message = f"Error removing draft from db. {e}"
+            print(db_failure_message, file=sys.stderr)
+            socketio.emit('receiver', {'message': db_failure_message})
 
 
 def gmail_delete():
@@ -1171,9 +1218,16 @@ def gmail_delete():
     if draft_to_delete:
         # delete from our db
         draft_id = draft_to_delete.email_id
-        delete_gmail_draft(g.email, draft_id)
-        db.session.delete(draft_to_delete)
-        db.session.commit()
+        delete_gmail_draft(g.gmail_service, draft_id)
+
+        try:
+            db.session.delete(draft_to_delete)
+            db.session.commit()
+        except Exception as e:
+            db_failure_message = f"Error deleting draft in db. {e}"
+            print(db_failure_message, file=sys.stderr)
+            socketio.emit('receiver', {'message': db_failure_message})
+
 
 @app.route("/update_server", methods=['POST'])
 def webhook():
