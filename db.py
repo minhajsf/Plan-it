@@ -1,18 +1,20 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Enum
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin
+
 
 
 db = SQLAlchemy()
 
 
-class Users(db.Model):
+class Users(db.Model, UserMixin):
     """
     Table for Users
     """
     __tablename__ = "users"
 
-    user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(60), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(60), nullable=False)
@@ -155,7 +157,7 @@ class Emails(db.Model):
     to = db.Column(db.String, nullable=False)
     email_id = db.Column(db.String, nullable=False)
     email_dictionary = db.Column(db.String, nullable=False)
-    link = db.Column(db.String, nullable=False)
+    link = db.Column(db.String, nullable=False, default='')
 
     def __init__(self, **kwargs):
         """
@@ -187,7 +189,6 @@ class Emails(db.Model):
             "link": self.link
 
         }
-    
 class History(db.Model):
     """
     Table for History
@@ -217,4 +218,3 @@ class History(db.Model):
             "user_prompt": self.user_prompt,
             "chat_response": self.chat_response,
         }
-

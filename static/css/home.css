@@ -6,34 +6,6 @@ html, body {
     background-attachment: fixed;
 }
 
-/*
-.gradient-bg {
-    background-image: radial-gradient(circle at 16% 83%, rgba(148, 148, 148,0.06) 0%, rgba(148, 148, 148,0.06) 50%,rgba(63, 63, 63,0.06) 50%, rgba(63, 63, 63,0.06) 100%),
-                      radial-gradient(circle at 68% 87%, rgba(66, 66, 66,0.06) 0%, rgba(66, 66, 66,0.06) 50%,rgba(105, 105, 105,0.06) 50%, rgba(105, 105, 105,0.06) 100%),
-                      radial-gradient(circle at 38% 50%, rgba(123, 123, 123,0.06) 0%, rgba(123, 123, 123,0.06) 50%,rgba(172, 172, 172,0.06) 50%, rgba(172, 172, 172,0.06) 100%),
-                      linear-gradient(90deg, hsl(18,0%,1%),hsl(18,0%,1%));
-    background-repeat: no-repeat;
-    background-size: cover;
-    min-height: 50vh; 
-    position: relative;
-}
-
-.off-white-bg {
-    background-image: radial-gradient(circle at 16% 83%, rgba(107, 107, 107, 0.068) 0%, rgba(148, 148, 148,0.06) 50%,rgba(110, 110, 110, 0.089) 50%, rgba(177, 177, 177, 0.06) 100%),
-    radial-gradient(circle at 68% 87%, rgba(189, 189, 189, 0.06) 0%, rgba(66, 66, 66, 0.09) 50%,rgba(105, 105, 105, 0.11) 50%, rgba(100, 100, 100, 0.06) 100%),
-    radial-gradient(circle at 38% 50%, rgba(123, 123, 123,0.06) 0%, rgba(123, 123, 123,0.06) 50%,rgba(172, 172, 172,0.06) 50%, rgba(160, 160, 160, 0.06) 100%),
-    linear-gradient(90deg, hsl(0, 0%, 100%),hsl(0, 0%, 100%));
-    min-height: 50vh; 
-    padding: 20px; 
-}
-.gradient-bg h1, .gradient-bg h2, .gradient-bg p, .navbar a{
-    color: white;
-}
-
-.off-white-bg h2, .off-white-bg  p {
-    color: black;
-}
-    */
 .bg {
     background-image: url(../img/steal-purple.png);
     background-attachment: fixed;
@@ -129,6 +101,7 @@ html, body {
 h1, h2, p, .navbar a, footer {
     font-family: "Work Sans", sans-serif;
     color: white;
+    color: white;
 }
 
 .content  {
@@ -137,35 +110,45 @@ h1, h2, p, .navbar a, footer {
     align-items:center;
     text-align: center;
     position: relative;
+    
 }
-
+.navbar {
+    position: relative;
+    z-index: 1000;
+}
 .navbar h1 {
     font-size: 50px;
     color: white;
 }
 .nav-link {
     margin-left: 30px;
+    
 }
 .btn {
     pointer-events: auto;
     width: 140px;
-    height: 40px;
-    z-index: 1;
+    height: 50px;
+    /*z-index: 1;*/   
+    
 }
+
 #intro-container h1{
     font-size: 120px;
     color: white;
+    color: white;
 }
 #intro-container p{
-    font-size: 20px;
+    font-size: 25px;
     color: white;
 }
 #second-title h1 {
     font-size: 80px;
     margin: 5% 0;
     color: white;
+    color: white;
 }
 #intro-container {
+    min-height: 100vh;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -174,19 +157,23 @@ h1, h2, p, .navbar a, footer {
     text-align: center;
     transform: translateY(-20%);
     pointer-events: auto;
+    pointer-events: auto;
 }
 #arrow {
     position: absolute;
-    top: 110%;
+    top: 100%;
 
 }
+
 
 #info-container h2 {
     font-size: 45px;
     color: white;
+    color: white;
 }
 #info-container p {
     font-size: 20px;
+    color: white;
     color: white;
 }
 #info-container {
