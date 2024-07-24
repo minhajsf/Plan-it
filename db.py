@@ -155,7 +155,7 @@ class Emails(db.Model):
     to = db.Column(db.String, nullable=False)
     email_id = db.Column(db.String, nullable=False)
     email_dictionary = db.Column(db.String, nullable=False)
-    link = db.Column(db.String, nullable=False)
+    link = db.Column(db.String, nullable=False, default='')
 
     def __init__(self, **kwargs):
         """
