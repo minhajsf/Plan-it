@@ -53,15 +53,16 @@
             </div>
         </div>
         <div id="overlay"></div>
-        <div class="section">
+        <div class="section" id = "events-section">
             <div class = "section-header"><h2>Upcoming Events</h2></div>
             <div class="card-container">
-                {% for i in range(5) %}
+                {% for event in events %}
                 <div class="card">
-                    <div class="card-title">Event Title {{ i + 1 }}</div>
-                    <div class="card-details">Date: 2024-07-{{ i + 1 }}</div>
-                    <div class="card-details">Location: Location {{ i + 1 }}</div>
-                    <div class="card-details">Time: {{ 10 + i }}:00</div>
+                    <div class="card-title">{{ event.title }}</div>
+                    <div class="card-details">Date: {{ event.start.strftime('%Y-%m-%d') }}</div>
+                    <div class="card-details">Description: {{ event.description }}</div>
+                    <div class="card-details">Time: {{ event.start.strftime('%H:%M') }}</div>
+                    <div class="card-details">Link: <a href="https://example.com" target="_blank">Join</a></div>
                 </div>
                 {% endfor %}
             </div>
@@ -69,11 +70,12 @@
         <div class="section" id = "meetings-section">
             <div class = "section-header"><h2>Upcoming Meetings</h2></div>
             <div class="card-container">
-                {% for i in range(5) %}
+                {% for meet in meets %}
                 <div class="card">
-                    <div class="card-title">Meeting Title {{ i + 1 }}</div>
-                    <div class="card-details">Date: 2024-07-{{ i + 6 }}</div>
-                    <div class="card-details">Time: {{ 14 + i }}:00</div>
+                    <div class="card-title">{{ meet.summary }}</div>
+                    <div class="card-details">Date: {{ meet.start.strftime('%Y-%m-%d') }}</div>
+                    <div class="card-details">Description: {{ meet.description }}</div>
+                    <div class="card-details">Time: {{ event.start.strftime('%H:%M') }}</div>
                     <div class="card-details">Link: <a href="https://example.com" target="_blank">Join</a></div>
                 </div>
                 {% endfor %}
@@ -82,11 +84,11 @@
         <div class="section" id = "saved-section">
             <div class = "section-header"><h2>Saved Drafts</h2></div>
             <div class="card-container">
-                {% for i in range(5) %}
+                {% for email in emails %}
                 <div class="card">
-                    <div class="card-title">Draft Title {{ i + 1 }}</div>
-                    <div class="card-details">Date: 2024-07-{{ i + 11 }}</div>
-                    <div class="card-details">Content: This is a draft content snippet...</div>
+                    <div class="card-title">{{ draft.subject }}</div>
+                    <div class="card-details">To: {{ draft.to }}</div>
+                    <div class="card-details">Body: {{ draft.subject[:20] }}...</div>
                 </div>
                 {% endfor %}
             </div>

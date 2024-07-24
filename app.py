@@ -129,7 +129,11 @@ def chat():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    return render_template('dashboard.html')
+    events = Events.query.filter_by(user_id=session['user_id']).order_by(Events.start).limit(10).all()
+    meets = Meets.query.filter_by(user_id=session['user_id']).order_by(Meets.start).limit(10).all()
+    emails = Emails.query.filter_by(user_id=session['user_id']).limit(10).all()
+
+    return render_template('dashboard.html', events=events, meets=meets, emails=emails)
 
 
 @app.route('/voice')
