@@ -356,8 +356,9 @@ def handle_user_prompt(prompt):
         google_setup()
 
         # Send success message to chat reciever-end
-        print(f"Event Type: {event_type}, Mode: {mode}", file=sys.stderr)
-        socketio.emit('receiver', {'message': f"Event Type: {event_type}, Mode: {mode}"})
+        route = f"Event Type: {event_type.upper()}, Mode: {mode.upper()}"
+        print(route, file=sys.stderr)
+        socketio.emit('receiver', {'message': route})
         success_message = eval(f"{event_type}_{mode}()")
         
         return success_message
@@ -367,6 +368,7 @@ def handle_user_prompt(prompt):
               GMeet -> (Create, Update, or Remove), or Gmail -> (Create, Update, Send, and Delete)"""
         print("Exception thrown in handle_user_prompt at bottom try-catch",
               file=sys.stderr)
+        socketio.emit('receiver', {'message': failure_message})
         print(f"Error: {e}", file=sys.stderr)
         return failure_message
 
@@ -481,10 +483,10 @@ def gcal_create():
         print(db_failure_message, file=sys.stderr)
         socketio.emit('receiver', {'message': db_failure_message})
 
-    event_description = f"""Event Created! Check your Google Calendar to confirm!\nEvent Details:\n
-    Title: {new_event.title}
-    Description: {new_event.description}
-    Start Time: {new_event.start}
+    event_description = f"""Event Created! Check your Google Calendar to confirm! Event Details:  
+    Title: {new_event.title}  
+    Description: {new_event.description}  
+    Start Time: {new_event.start}  
     End Time: {new_event.end}
     """
     socketio.emit('receiver', {'message': event_description})
@@ -564,10 +566,10 @@ def gcal_update():
         print(db_failure_message, file=sys.stderr)
         socketio.emit('receiver', {'message': db_failure_message})
 
-    event_description = f"""Event Updated! Check your Google Calendar to confirm!\nEvent Details:\n
-    Title: {event.title}
-    Description: {event.description}
-    Start Time: {event.start}
+    event_description = f"""Event Updated! Event Details:  
+    Title: {event.title}  
+    Description: {event.description}  
+    Start Time: {event.start}  
     End Time: {event.end}
     """
     print("Event has been updated successfully.")
@@ -612,11 +614,11 @@ def gcal_remove():
 
     remove_event(g.service, event.event_id)
 
-    event_description = f"""Event Deleted! \nEvent Details:\n
-    \nTitle: {event.title}
-    \nDescription: {event.description}
-    \nStart Time: {event.start}
-    \nEnd Time: {event.end}
+    event_description = f"""Event Deleted! \nEvent Details:  
+    Title: {event.title}  
+    Description: {event.description}  
+    Start Time: {event.start}  
+    End Time: {event.end}
     """
 
     try:
@@ -768,11 +770,11 @@ def gmeet_create():
         print(db_failure_message, file=sys.stderr)
         socketio.emit('receiver', {'message': db_failure_message})
 
-    event_description = f"""Meeting created! \nEvent Details:\n
-    \nTitle: {new_meeting.summary}
-    \nDescription: {new_meeting.description}
-    \nStart Time: {new_meeting.start}
-    \nEnd Time: {new_meeting.end}
+    event_description = f"""Meeting created! \nEvent Details:  
+    Title: {new_meeting.summary}  
+    Description: {new_meeting.description}  
+    Start Time: {new_meeting.start}  
+    End Time: {new_meeting.end}
     """
     print("Meeting has been created successfully.")
 
@@ -853,10 +855,10 @@ def gmeet_update():
         socketio.emit('receiver', {'message': db_failure_message})
         
 
-    event_description = f"""Meeting updated! \nEvent Details:\n
-    \nTitle: {meeting.summary}
-    \nDescription: {meeting.description}
-    \nStart Time: {meeting.start}
+    event_description = f"""Meeting updated! \nEvent Details:  
+    \nTitle: {meeting.summary}  
+    \nDescription: {meeting.description}  
+    \nStart Time: {meeting.start}  
     \nEnd Time: {meeting.end}
     """
 
@@ -912,11 +914,11 @@ def gmeet_remove():
         socketio.emit('receiver', {'message': db_failure_message})
 
 
-    event_description = f"""Meeting removed! \nEvent Details:\n
-    \nTitle: {meeting_to_remove.summary}
-    \nDescription: {meeting_to_remove.description}
-    \nStart Time: {meeting_to_remove.start}
-    \nEnd Time: {meeting_to_remove.end}
+    event_description = f"""Meeting removed! Event Details:  
+    Title: {meeting_to_remove.summary}  
+    Description: {meeting_to_remove.description}  
+    Start Time: {meeting_to_remove.start}  
+    End Time: {meeting_to_remove.end}
     """
     print("Meeting removed successfully.")
     socketio.emit('receiver', {'message': event_description})
