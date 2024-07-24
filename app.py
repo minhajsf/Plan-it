@@ -20,7 +20,7 @@ monkey.patch_all()
 
 # Google Imports
 import datetime
-from datetime import datetime
+from datetime import datetime, timedelta
 from tzlocal import get_localzone
 import uuid
 import base64
@@ -39,6 +39,7 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 proxied = FlaskBehindProxy(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
 
 
 # Database setup
