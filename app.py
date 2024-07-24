@@ -1,5 +1,3 @@
-from gevent import monkey
-monkey.patch_all()
 import os
 import json
 import git
@@ -10,18 +8,13 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_behind_proxy import FlaskBehindProxy
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_session import Session
 from forms import RegistrationForm, LoginForm
 from functools import wraps
 import socketio
 from dotenv import load_dotenv
 from openai import OpenAI
 import openai
-import redis
-
 from db import db, Users, Events, Meets, Emails
-# from gevent import monkey
-# monkey.patch_all()
 
 import logging
 
@@ -41,18 +34,12 @@ from google.apps import meet_v2
 
 # Flask App setup
 app = Flask(__name__)
-socketio = SocketIO(app, async_mode='gevent', manage_session=False)
+socketio = SocketIO(app)
 load_dotenv()
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 proxied = FlaskBehindProxy(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
-app.config['SESSION_TYPE'] = 'redis'
-app.config['SESSION_PERMANENT'] = True
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
-app.config['SESSION_USE_SIGNER'] = True
-redis_url = os.getenv('REDIS_URL')
-app.config['SESSION_REDIS'] = redis.from_url(redis_url)
-Session(app)
+
 
 # Database setup
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///plan-it.db'
