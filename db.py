@@ -187,7 +187,6 @@ class Emails(db.Model):
             "link": self.link
 
         }
-    
 class History(db.Model):
     """
     Table for History
@@ -217,4 +216,3 @@ class History(db.Model):
             "user_prompt": self.user_prompt,
             "chat_response": self.chat_response,
         }
-
