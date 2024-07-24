@@ -18,6 +18,7 @@ import redis
 from db import db, Users, Events, Meets, Emails
 from gevent import monkey
 monkey.patch_all()
+import logging
 
 # Google Imports
 import datetime
@@ -69,11 +70,13 @@ GMAIL_SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
 
 @app.route('/')
 def root():
+    app.logger.debug('Root route accessed')
     return redirect(url_for('home'))
 
 
 @app.route("/register", methods=['GET', 'POST'])
 def register():
+    app.logger.debug('Register route accessed')
     form = RegistrationForm()
     if form.validate_on_submit():
         existing_user = Users.query.filter_by(email=form.email.data).first()
@@ -91,6 +94,7 @@ def register():
 
 @app.route("/login", methods=['GET', 'POST'])
 def login():
+    app.logger.debug('Login route accessed')
     form = LoginForm()
     if form.validate_on_submit():
         user = Users.query.filter_by(email=form.email.data).first()
@@ -106,6 +110,7 @@ def login():
 
 @app.route("/logout")
 def logout():
+    app.logger.debug('Logout route accessed')
     session.pop('user_id', None)
     print("User ID after logout:", session.get('user_id'))
     flash('You have been logged out.', 'info')
@@ -125,12 +130,14 @@ def login_required(f):
 
 @app.route('/home')
 def home():
+    app.logger.debug('Home route accessed')
     return render_template('home.html')
 
 
 @app.route('/chat')
 @login_required
 def chat():
+    app.logger.debug('Chat route accessed')
     return render_template('chat.html')
 
 
@@ -189,6 +196,7 @@ def google_setup():
     Google Auth & Service.
     """
     def get_google_service():
+        app.logger.debug('Google service accessed')
         if hasattr(g, 'service'):
             print("Service already exists", file=sys.stderr)
             return
@@ -215,6 +223,7 @@ def google_setup():
 
 def gmail_setup():
     def get_google_service():
+        app.logger.debug('Gmail service accessed')
         print("google_setup route hit", file=sys.stderr)
         if hasattr(g, 'service'):
             print("Service already exists", file=sys.stderr)
@@ -252,6 +261,7 @@ def gmail_setup():
         get_google_service()
 
 def determine_query_type(message: str):
+    app.logger.debug('Determine query accessed')
     result = {"event_type": "unknown", "mode": "unknown"}  # Default result
 
     try:
@@ -291,6 +301,7 @@ def determine_query_type(message: str):
 
 
 def gpt_format_json(system_instructions: str, input_string: str):
+    app.logger.debug('GPT format accessed')
     try:
         # Make API request
         completion = client.chat.completions.create(
@@ -384,6 +395,7 @@ def find_email_id(prompt, list):
 # noinspection PyPackageRequirements
 @socketio.on('user_prompt')
 def handle_user_prompt(prompt):
+    app.logger.debug('Handle user prompt accessed')
 
     # add in prompt to dictionary directly
     # saves time on the gpt call in determine_query_type
@@ -441,6 +453,7 @@ def handle_user_prompt(prompt):
 
 
 def create_event(service, event_data):
+    app.logger.debug('create event accessed')
     event = service.events().insert(
         calendarId='primary',
         body=event_data
@@ -507,7 +520,7 @@ def format_system_instructions_for_event(query_type_dict: dict, content_dict: di
 
 # Create a calendar event
 def gcal_create():
-
+    app.logger.debug('gcal create accessed')
     prompt_dict = session.get('prompt_dictionary')
 
     # GPT instructions
