@@ -14,6 +14,7 @@ import socketio
 from dotenv import load_dotenv
 from openai import OpenAI
 import openai
+import redis
 from db import db, Users, Events, Meets, Emails
 from gevent import monkey
 monkey.patch_all()
@@ -34,12 +35,15 @@ from google.apps import meet_v2
 
 # Flask App setup
 app = Flask(__name__)
-socketio = SocketIO(app)
+socketio = SocketIO(app, manage_session=False)
 load_dotenv()
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 proxied = FlaskBehindProxy(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
+app.config['SESSION_USE_SIGNER'] = True
+app.config['SESSION_REDIS'] = redis.StrictRedis(host='localhost', port=6379, db=0)
+Session(app)
 
 
 # Database setup
