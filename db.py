@@ -1,18 +1,20 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Enum
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin
+
 
 
 db = SQLAlchemy()
 
 
-class Users(db.Model):
+class Users(db.Model, UserMixin):
     """
     Table for Users
     """
     __tablename__ = "users"
 
-    user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(60), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(60), nullable=False)

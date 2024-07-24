@@ -8,6 +8,7 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_behind_proxy import FlaskBehindProxy
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from flask_login import LoginManager, login_user, logout_user, current_user, login_required
 from forms import RegistrationForm, LoginForm
 from functools import wraps
 import socketio
@@ -50,6 +51,10 @@ db.init_app(app)
 with app.app_context():
     db.create_all()
 
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
 # ChatGPT API Setup
 client = OpenAI(
     api_key=OPENAI_API_KEY,
@@ -62,6 +67,9 @@ SCOPES = [
     'https://www.googleapis.com/auth/gmail.readonly'
 ]
 
+@login_manager.user_loader
+def load_user(user_id):
+    return Users.query.get(int(user_id))
 
 @app.route("/register", methods=['GET', 'POST'])
 def register():
@@ -88,7 +96,8 @@ def login():
     if form.validate_on_submit():
         user = Users.query.filter_by(email=form.email.data).first()
         if user and user.check_password(form.password.data):
-            session['user_id'] = user.user_id
+            login_user(user)
+            session['user_id'] = user.id 
             flash(f'Login successful for {form.email.data}', 'success')
             return redirect(url_for('chat'))
         else:
@@ -100,21 +109,21 @@ def login():
 @app.route("/logout")
 def logout():
     app.logger.debug('Logout route accessed')
+    logout_user()
     session.pop('user_id', None)
-    print("User ID after logout:", session.get('user_id'))
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
 
 
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            flash('Please log in to access this page.', 'warning')
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
+# def login_required(f):
+#     @wraps(f)
+#     def decorated_function(*args, **kwargs):
+#         if 'user_id' not in session:
+#             flash('Please log in to access this page.', 'warning')
+#             return redirect(url_for('login'))
+#         return f(*args, **kwargs)
 
-    return decorated_function
+#     return decorated_function
 
 
 @app.route('/')
@@ -166,7 +175,7 @@ def handle_disconnect():
 
 # Get user's token.json from db record. Return None if none exists
 def get_user_token(uid):
-    user = Users.query.filter_by(user_id=uid).first()
+    user = Users.query.filter_by(id=uid).first()
     if user and user.token:
         user_token = json.loads(user.token)
         return Credentials.from_authorized_user_info(user_token)
@@ -175,7 +184,7 @@ def get_user_token(uid):
 
 # Save user's token.json to db record
 def save_user_token(uid, creds):
-    user = Users.query.filter_by(user_id=uid).first()
+    user = Users.query.filter_by(id=uid).first()
     if user:
         user.token = creds.to_json()
         db.session.commit()
