@@ -15,6 +15,8 @@ from dotenv import load_dotenv
 from openai import OpenAI
 import openai
 from db import db, Users, Events, Meets, Emails
+from gevent import monkey
+monkey.patch_all()
 
 # Google Imports
 import datetime
