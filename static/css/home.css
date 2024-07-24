@@ -166,7 +166,7 @@ h1, h2, p, .navbar a, footer {
     color: white;
 }
 #intro-container {
-    min-height: 90vh;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
     justify-content: center;
