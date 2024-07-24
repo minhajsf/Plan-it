@@ -1,3 +1,5 @@
+from gevent import monkey
+monkey.patch_all()
 import os
 import json
 import git
@@ -16,8 +18,7 @@ from openai import OpenAI
 import openai
 import redis
 from db import db, Users, Events, Meets, Emails
-from gevent import monkey
-monkey.patch_all()
+
 import logging
 
 # Google Imports
