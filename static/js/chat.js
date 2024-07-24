@@ -13,6 +13,9 @@ const recordingIndicator = document.querySelector('.recording-indicator');
 const openButtons = document.querySelectorAll("[data-setting-target]");
 const closeButtons = document.querySelectorAll("[data-close-button]");
 const overlay = document.getElementById("overlay");
+const textarea = document.getElementById('prompt');
+const charCount = document.getElementById('charCount');
+const maxLength = parseInt(textarea.getAttribute('maxlength'));
 const socket = io();
 
 
@@ -142,11 +145,33 @@ promptInput.addEventListener('keypress', (event) => {
     }
 });
 
+function formatMessage(message) {
+    // Convert ISO 8601 date-time strings to a more readable format
+    message = message.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}([+-]\d{2}:\d{2})?/g, function (match) {
+       
+        const date = new Date(match);
+        
+        const options = { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric', 
+            hour: 'numeric', 
+            minute: 'numeric', 
+            second: 'numeric', 
+            hour12: true 
+        };
+        return date.toLocaleString(undefined, options);
+    });
+
+    // Replace newlines with <br> for HTML
+    return message.replace(/\n/g, '<br>');
+}
+
 //Append message to chat box
 function appendMessage(message, sender) {
     const messageElement = document.createElement('div');
     messageElement.classList.add('chat-message', sender);
-    messageElement.textContent = message;
+    messageElement.innerHTML = formatMessage(message);
     chatBox.appendChild(messageElement);
     chatBox.scrollTop = chatBox.scrollHeight;
     chatHistory(); 
@@ -211,6 +236,7 @@ const generalButtonHandler = function(status){
     } else {
         console.error('Email container does not have the expected children.');
     }
+
 };
 
 // Button handlers
@@ -250,7 +276,9 @@ function createEmailDiv(fields) {
     bodyDiv.className = 'body-input-field';
     bodyDiv.innerHTML = `
         <label for="body-field">Body:</label>
+
         <textarea id="body-field" name="body-field"> ${fields.body} </textarea>
+
     `;
 
     // Create the Button container
@@ -327,6 +355,55 @@ document.addEventListener('DOMContentLoaded', () => {
         createEmailDiv(email_json);
 });
 
+
 });
 
+// this code is for the settings "clear" button
+document.getElementById('clearBtn').addEventListener('click', function() {
+    document.getElementById('confirmationDialog').style.display = 'block';
+});
+
+document.getElementById('confirmYes').addEventListener('click', function() {
+    console.log('Confirmed');
+    document.getElementById('confirmationDialog').style.display = 'none';
+    
+    document.getElementById('secondDialog').style.display = 'block';
+});
+
+document.getElementById('confirmNo').addEventListener('click', function() {
+    document.getElementById('confirmationDialog').style.display = 'none';
+});
+
+
+document.getElementById('okBtn').addEventListener('click', function() {
+    document.getElementById('secondDialog').style.display = 'none';
+});
+
+//this is for the textbox to type, it will expand vertically
+document.addEventListener('input', function (event) {
+    if (event.target.id === 'prompt') {
+        event.target.style.height = 'auto'; // Reset height to auto to calculate the new height
+        event.target.style.height = event.target.scrollHeight + 'px'; // Set the height to the scrollHeight
+    }
+});
+
+//error if user reaches character limit
+textarea.addEventListener('input', function () {
+    const length = textarea.value.length;
+    const remaining = maxLength - length;
+    if (remaining <= 0) {
+        charCount.textContent = `0 characters remaining`;
+        charCount.classList.add('error');
+    } else if (remaining <= 20) {
+        charCount.textContent = `${remaining} characters remaining`;
+        charCount.classList.add('warning');
+        charCount.classList.remove('error');
+    } else {
+        charCount.textContent = `${remaining} characters remaining`;
+        charCount.classList.remove('warning', 'error');
+    }
+});
+
+
+charCount.textContent = `${maxLength} characters remaining`;
 

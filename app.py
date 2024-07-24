@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 import openai
 import redis
+
 from db import db, Users, Events, Meets, Emails
 # from gevent import monkey
 # monkey.patch_all()
@@ -73,6 +74,7 @@ SCOPES = [
     'https://www.googleapis.com/auth/gmail.modify',
     'https://www.googleapis.com/auth/gmail.readonly'
 ]
+
 
 @app.route("/register", methods=['GET', 'POST'])
 def register():
@@ -202,6 +204,7 @@ def get_google_service():
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             try:
+
                 creds.refresh(Request())
                 save_user_token(user_id, creds)
             except Exception as e:
@@ -230,6 +233,7 @@ def google_setup():
             print(f"Failed to set up Google Calendar service: {e}")
 
 
+
 def gmail_setup():
     if not hasattr(g, 'email'):
         try:
@@ -239,7 +243,9 @@ def gmail_setup():
             print(f"Failed to set up Gmail service: {e}")
 
 def determine_query_type(message: str):
+
     app.logger.debug('Determine query accessed')
+
     result = {"event_type": "unknown", "mode": "unknown"}  # Default result
 
     try:
@@ -378,6 +384,8 @@ def handle_user_prompt(prompt):
     # saves time on the gpt call in determine_query_type
     prompt_dictionary = determine_query_type(prompt)
 
+    print(prompt_dictionary)
+
     if prompt_dictionary == {"event_type": "unknown", "mode": "unknown"}:
         socketio.emit('receiver',
                       {'message': 'To use Plan-it, specify a service, action, and the corresponding details. '
@@ -392,11 +400,13 @@ def handle_user_prompt(prompt):
     # determine the event type and mode
     event_type = prompt_dictionary['event_type'].lower()
     mode = prompt_dictionary['mode'].lower()
+    print(mode)
 
     # TRY eval(f"{event_type}_{mode}()")
     try:
         google_setup()
         gmail_setup()
+
 
         # Send success message to chat reciever-end
         print(f"Event Type: {event_type}, Mode: {mode}")
@@ -410,7 +420,9 @@ def handle_user_prompt(prompt):
         else:
             user_event = "Gmail draft"
 
-        socketio.emit('receiver', {'message': f"{user_mode}ing your {user_event}."})
+
+        socketio.emit('receiver', {'message': f"Sure thing! {user_mode}ing your {user_event}..."})
+
         success_message = eval(f"{event_type}_{mode}()")
 
         return success_message
@@ -459,7 +471,7 @@ def remove_event(service, event_id):
 def format_system_instructions_for_event(query_type_dict: dict, content_dict: dict = None) -> str:
     timeZone = get_localzone()
     current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-
+    
     summary = content_dict.get('summary') if content_dict else '<summary_here>'
     description = content_dict.get(
         'description') if content_dict else '<extra specifications, locations, and descriptions here>'
@@ -500,6 +512,7 @@ def format_system_instructions_for_event(query_type_dict: dict, content_dict: di
 # Create a calendar event
 def gcal_create():
     app.logger.debug('gcal create accessed')
+
     prompt_dict = session.get('prompt_dictionary')
 
     # GPT instructions
@@ -534,7 +547,8 @@ def gcal_create():
         print(db_failure_message, file=sys.stderr)
         socketio.emit('receiver', {'message': db_failure_message})
 
-    event_description = f"""Event Created! Check your Google Calendar to confirm!\nEvent Details:\n
+    event_description = f"""Event Created! Check your Google Calendar to confirm!\n
+    Event Details:
     Title: {new_event.title}
     Description: {new_event.description}
     Start Time: {new_event.start}
@@ -617,7 +631,8 @@ def gcal_update():
         print(db_failure_message, file=sys.stderr)
         socketio.emit('receiver', {'message': db_failure_message})
 
-    event_description = f"""Event Updated! Check your Google Calendar to confirm!\nEvent Details:\n
+    event_description = f"""Event Updated! Check your Google Calendar to confirm!\n
+    Event Details:
     Title: {event.title}
     Description: {event.description}
     Start Time: {event.start}
@@ -665,11 +680,12 @@ def gcal_remove():
 
     remove_event(g.service, event.event_id)
 
-    event_description = f"""Event Deleted! \nEvent Details:\n
-    \nTitle: {event.title}
-    \nDescription: {event.description}
-    \nStart Time: {event.start}
-    \nEnd Time: {event.end}
+    event_description = f"""Event Deleted!\n
+    Event Details:
+    Title: {event.title}
+    Description: {event.description}
+    Start Time: {event.start}
+    End Time: {event.end}
     """
 
     try:
@@ -819,11 +835,12 @@ def gmeet_create():
         print(db_failure_message, file=sys.stderr)
         socketio.emit('receiver', {'message': db_failure_message})
 
-    event_description = f"""Meeting created! \nEvent Details:\n
-    \nTitle: {new_meeting.summary}
-    \nDescription: {new_meeting.description}
-    \nStart Time: {new_meeting.start}
-    \nEnd Time: {new_meeting.end}
+    event_description = f"""Meeting created!\n
+    Event Details:
+    Title: {new_meeting.summary}
+    Description: {new_meeting.description}
+    Start Time: {new_meeting.start}
+    End Time: {new_meeting.end}
     """
     print("Meeting has been created successfully.")
 
@@ -896,7 +913,9 @@ def gmeet_update():
         meeting.meet_id = event.get('id')
         meeting.attendees = json.dumps(event_data.get('attendees'))
         meeting.meet_dictionary = json.dumps(event_data)
+
         meeting.link = event.get('htmlLink')
+
 
         db.session.commit()
     except Exception as e:
@@ -904,11 +923,12 @@ def gmeet_update():
         print(db_failure_message, file=sys.stderr)
         socketio.emit('receiver', {'message': db_failure_message})
 
-    event_description = f"""Meeting updated! \nEvent Details:\n
-    \nTitle: {meeting.summary}
-    \nDescription: {meeting.description}
-    \nStart Time: {meeting.start}
-    \nEnd Time: {meeting.end}
+    event_description = f"""Meeting updated!\n
+    Event Details:
+    Title: {meeting.summary}
+    Description: {meeting.description}
+    Start Time: {meeting.start}
+    End Time: {meeting.end}
     """
 
     print("Meeting updated successfully.")
@@ -964,11 +984,12 @@ def gmeet_remove():
         print(db_failure_message, file=sys.stderr)
         socketio.emit('receiver', {'message': db_failure_message})
 
-    event_description = f"""Meeting removed! \nEvent Details:\n
-    \nTitle: {meeting_to_remove.summary}
-    \nDescription: {meeting_to_remove.description}
-    \nStart Time: {meeting_to_remove.start}
-    \nEnd Time: {meeting_to_remove.end}
+    event_description = f"""Meeting removed!\n
+    Event Details:
+    Title: {meeting_to_remove.summary}
+    Description: {meeting_to_remove.description}
+    Start Time: {meeting_to_remove.start}
+    End Time: {meeting_to_remove.end}
     """
     print("Meeting removed successfully.")
     socketio.emit('receiver', {'message': event_description})
@@ -1086,12 +1107,16 @@ def handle_approval_response(response):
     email_json = response.get('email')
     if email_json and (status == 'save' or status == 'send'):
         email_raw = email_json_to_raw(email_json)
+
         print("g.email: ", g.email)
+
         draft = create_gmail_draft(g.email, email_raw)
         draft_id = draft.get('id')
         if status == 'send':
             send_gmail_draft(g.email, draft_id)
+
             print("Gmail draft sent successfully")
+
         elif status == 'save':
             # add stuff here for other fields
             newly_drafted_email = Emails(
@@ -1116,12 +1141,16 @@ def handle_approval_response(response):
 def gmail_create():
     prompt_dict = session.get('prompt_dictionary')
     prompt = prompt_dict.get('prompt')
+
     print(g.email)
+
     content_dict = {'from': f"{get_authenticated_user_email(g.email)}"}
     instructions = format_system_instructions_for_gmail(
         prompt_dict, content_dict)
 
     created_email_json = gpt_format_json(instructions, prompt)
+
+    print(created_email_json)
 
     socketio.emit('request-approval', created_email_json)
 
@@ -1213,6 +1242,7 @@ def gmail_delete():
     if draft_to_delete:
         # delete from our db
         draft_id = draft_to_delete.email_id
+
         delete_gmail_draft(g.gmail_service, draft_id)
 
         try:
@@ -1233,7 +1263,6 @@ def webhook():
         return 'Updated PythonAnywhere successfully', 200
     else:
         return 'Wrong event type', 400
-
 
 if __name__ == "__main__":
     socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
