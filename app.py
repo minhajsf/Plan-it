@@ -47,7 +47,8 @@ app.config['SESSION_TYPE'] = 'redis'
 app.config['SESSION_PERMANENT'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
 app.config['SESSION_USE_SIGNER'] = True
-app.config['SESSION_REDIS'] = redis.StrictRedis(host='localhost', port=6379, db=0)
+redis_url = os.getenv('REDIS_URL')
+app.config['SESSION_REDIS'] = redis.from_url(redis_url)
 Session(app)
 
 
