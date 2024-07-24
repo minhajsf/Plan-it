@@ -56,41 +56,54 @@
         <div class="section" id = "events-section">
             <div class = "section-header"><h2>Upcoming Events</h2></div>
             <div class="card-container">
-                {% for event in events %}
-                <div class="card">
-                    <div class="card-title">{{ event.title }}</div>
-                    <div class="card-details">Date: {{ event.start.strftime('%Y-%m-%d') }}</div>
-                    <div class="card-details">Description: {{ event.description }}</div>
-                    <div class="card-details">Time: {{ event.start.strftime('%H:%M') }}</div>
-                    <div class="card-details">Link: <a href="https://example.com" target="_blank">Join</a></div>
-                </div>
-                {% endfor %}
+                {% if events %}
+                    {% for event in events %}
+                    <div class="card">
+                        <div class="card-title">{{ event.title }}</div>
+                        <div class="card-details">Date: {{ event.start }}</div>
+                        <div class="card-details">Description: {{ event.description }}</div>
+                        <div class="card-details">Time: {{ event.start }}</div>
+                        <div class="card-details">Link: <a href="{{ event.link }}" target="_blank">View event in Google Calendar</a></div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p>No upcoming events</p>
+                {% endif %}
             </div>
         </div>
         <div class="section" id = "meetings-section">
             <div class = "section-header"><h2>Upcoming Meetings</h2></div>
             <div class="card-container">
-                {% for meet in meets %}
-                <div class="card">
-                    <div class="card-title">{{ meet.summary }}</div>
-                    <div class="card-details">Date: {{ meet.start.strftime('%Y-%m-%d') }}</div>
-                    <div class="card-details">Description: {{ meet.description }}</div>
-                    <div class="card-details">Time: {{ event.start.strftime('%H:%M') }}</div>
-                    <div class="card-details">Link: <a href="https://example.com" target="_blank">Join</a></div>
-                </div>
-                {% endfor %}
+                {% if meets %}
+                    {% for meet in meets %}
+                    <div class="card">
+                        <div class="card-title">{{ meet.summary }}</div>
+                        <div class="card-details">Date: {{ meet.start }}</div>
+                        <div class="card-details">Description: {{ meet.description }}</div>
+                        <div class="card-details">Time: {{ meet.start }}</div>
+                        <div class="card-details">Link: <a href="{{ meet.link }}" target="_blank">View meet in Google Calendar</a></div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p>No upcoming meetings</p>
+                {% endif %}
             </div>
         </div>
         <div class="section" id = "saved-section">
             <div class = "section-header"><h2>Saved Drafts</h2></div>
             <div class="card-container">
-                {% for email in emails %}
-                <div class="card">
-                    <div class="card-title">{{ draft.subject }}</div>
-                    <div class="card-details">To: {{ draft.to }}</div>
-                    <div class="card-details">Body: {{ draft.subject[:20] }}...</div>
-                </div>
-                {% endfor %}
+                {% if emails %}
+                    {% for email in emails %}
+                    <div class="card">
+                        <div class="card-title">{{ draft.subject }}</div>
+                        <div class="card-details">To: {{ draft.to }}</div>
+                        <div class="card-details">Body: {{ draft.subject[:20] }}...</div>
+                        <div class="card-details">Link: <a href="{{ email.link }}">View draft in GMail</a></div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p>No saved drafts</p>
+                {% endif %}
             </div>
         </div>
     </div>
