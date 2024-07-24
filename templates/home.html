@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang = "en">
 <head>
     <title>Home</title>
     <meta charset="UTF-8">
@@ -8,9 +8,12 @@
     <script src="../static/js/home.js" defer></script>
     <script src="../static/js/flash.js"></script>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="content">
@@ -36,7 +39,7 @@
             <div class="hidden" id="intro-container">
                 <h1>Welcome to Plan-it</h1>
                 <p>Blast off into a new era of productivity with Plan-it. Leveraging the power of Google's API, effortlessly create events, send emails, and schedule meetings with stellar efficiency.</p>
-                <a href="{{url_for('login')}}" class="btn btn-primary ">
+                <a href="{{url_for('login')}}" class="btn btn-primary btn-lg text-center ">
                     Get started
                 </a>
                 <a href="#info-container"><img src="../static/img/Arrow down.png" alt="arrow-down" id = "arrow"></a>

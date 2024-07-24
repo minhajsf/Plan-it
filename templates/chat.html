@@ -11,91 +11,131 @@
     <script src="../static/js/flash.js"></script>
 </head>
 <body>
-    {% block content %}
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        <nav class="navbar navbar-expand-lg black">
-            <h1>Plan-it</h1>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav mr-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('home') }}">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
-                    </li>
-                </ul>
-                <form class="form-inline">
-                    {% if session.get('user_id') %}
-                        <a href="{{ url_for('logout') }}" class="btn btn-outline-light">Logout</a>
-                    {% endif %}
-                </form>
-            </div>
-        </nav>
-        <div class="chat-container">
-            <div class="header">
-                <h1>Chat</h1>
-                <div class="icons">
-                    <button data-setting-target="#help" class="icon-button">
-                        <img src="{{url_for('static', filename='img/Help circle.png')}}" alt="Help" class="icon">
-                    </button>
-                    <div class="popup help" id="help">
-                        <div class="popup-header">Not sure what to say? 
-                            <button data-close-button class="close-button">&times;</button>
+    <div class="bg" id = "home">
+        <div class="star-field">
+            <div class="layer"></div>
+            <div class="layer"></div>
+            <div class="layer"></div>
+        </div>
+        {% block content %}
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            <nav class="navbar navbar-expand-lg black">
+                <h1>Plan-it</h1>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav mr-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('home') }}">Home</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+                        </li>
+                    </ul>
+                    <form class="form-inline">
+                        {% if session.get('user_id') %}
+                            <a href="{{ url_for('logout') }}" class="btn btn-outline-light">Logout</a>
+                        {% endif %}
+                    </form>
+                </div>
+            </nav>
+            <div class="chat-container">
+                <div class="header">
+                    <h1>Chat</h1>
+                    <div class="icons">
+                        <button data-setting-target="#help" class="icon-button">
+                            <img src="{{url_for('static', filename='img/Help circle.png')}}" alt="Help" class="icon">
+                        </button>
+                        <div class="popup help" id="help">
+                            <div class="popup-header">
+                                <span class="header-text">Not sure what to say?</span>
+                                <button data-close-button class="close-button">&times;</button>
+                            </div>
+                       
+                            <div class="popup-body">
+                                <section aria-label="Google Calendar Example">
+                                    <h3>Google Calendar Example</h3>
+                                    <blockquote>
+                                        <p>"I have a networking meeting to attend tomorrow at 5pm, please add it to my calendar"</p>
+                                    </blockquote>
+                                    
+                                </section>
+                                <hr>
+                                <section aria-label="Google Meeting Example">
+                                    <h3>Google Meeting Example</h3>
+                                    <blockquote>
+                                        <p>"I would like to set up a google meeting to discuss xyz, please add example@gmail.com as an attendee"</p>
+                                    </blockquote>
+                                    
+                                </section>
+                                <hr>
+                                <section aria-label="Google Email Example">
+                                    <h3>Google Email Example</h3>
+                                    <blockquote>
+                                        <p>"Please send an email to example@gmail.com to confirm our meeting scheduled for tomorrow at 5pm"</p>
+                                    </blockquote>
+                                </section>
+                            </div>
                         </div>
-                        <hr>
-                        <div class="popup-body">
-                            <p><b>Google Calendar Example</b></p>
-                            <p>"I have a networking meeting to attend tomorrow at 5pm, please add it to my calendar"</p>
-                            <hr>
-                            <p><b>Google Meeting Example</b></p>
-                            <p>"I would like to set up a google meeting to discuss xyz, please add example@gmail.com as an attendee"</p>
-                            <hr>
-                            <p><b>Google Email Example</b></p>
-                            <p>"Please send an email to example@gmail.com to confirm our meeting scheduled for tomorrow at 5pm"</p>
+                        
+                        <button data-setting-target="#settings" class="icon-button">
+                            <img src="{{url_for('static', filename='img/settings.png')}}" alt="Settings" class="icon">
+                        </button>
+                        <div class="popup settings" id="settings">
+                            <div class="popup-header">
+                                <span class="header-text">Settings</span>
+                                <button data-close-button class="close-button">&times;</button>
+                            </div>
+                            <div class="popup-body" id = "body-settings">
+                                <p>Clear Chat</p>
+                                <button class="btn btn-danger" id = "clearBtn">Clear</button>
+                            </div>
+
+                            <div id="confirmationDialog" class="confirmation-dialog" style="display: none;">
+                                <p>Are you sure? This action is irreversible.</p>
+                                <button id="confirmYes">Yes</button>
+                                <button id="confirmNo">No</button>
+                            </div>
+                                
+                            <div id="secondDialog" class="confirmation-dialog" style="display: none;">
+                                <p>Action completed successfully.</p>
+                                <button id="okBtn">OK</button>
+                            </div>
                         </div>
+                    </div>
+                </div>
+                <div id="overlay"></div>
+                <div class="chat-box" id="chatBox">
+                    <!-- Chat messages will appear here -->
+                </div>
+                <div class="counter" id="charCount">300 characters remaining</div>
+                <div class="chat-input">
+                    <textarea id="prompt" class="form-control" autocomplete="off" placeholder="Type a message" maxlength="300"></textarea>
+
+                    <div class = "send-button">
+                        <button onclick="sendPrompt()" class="btn btn-primary" style="background-color: transparent; border: none;">
+                            <img src="{{ url_for('static', filename='img/Send.png')}}" alt="Send" style="width: 40px; height: 40px;
+                            margin-top: 10px;">
+                        </button>
                     </div>
                     
-                    <button data-setting-target="#settings" class="icon-button">
-                        <img src="{{url_for('static', filename='img/settings.png')}}" alt="Settings" class="icon">
-                    </button>
-                    <div class="popup settings" id="settings">
-                        <div class="popup-header">Settings
-                            <button data-close-button class="close-button">&times;</button>
+                    <div class="mic-and-indicator">
+                        <div class="recording-indicator">
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                            <div class="bar"></div>
                         </div>
-                        <hr>
-                        <div class="popup-body">
-                           
-                        </div>
+                        <img id="startButton" src="{{ url_for('static', filename='img/Mic.png')}}" alt="Start Recording">
+                        <img id="stopButton" src="{{ url_for('static', filename='img/Mic.png')}}" alt="Stop Recording">
                     </div>
+                    <p id="outputText"></p>
                 </div>
             </div>
-            <div id="overlay"></div>
-            <div class="chat-box" id="chatBox">
-                <!-- Chat messages will appear here -->
-            </div>
-            <div class="chat-input">
-                <input id="prompt" class="form-control" autocomplete="off" placeholder="Type a message">
-                <button onclick="sendPrompt()" class="btn btn-primary" style="background-color: transparent; border: none;">
-                    <img src="{{ url_for('static', filename='img/Send.png')}}" alt="Send" style="width: 40px; height: 40px;">
-                </button>
-                <div class="mic-and-indicator">
-                    <div class="recording-indicator">
-                        <div class="bar"></div>
-                        <div class="bar"></div>
-                        <div class="bar"></div>
-                    </div>
-                    <img id="startButton" src="{{ url_for('static', filename='img/Mic.png')}}" alt="Start Recording">
-                    <img id="stopButton" src="{{ url_for('static', filename='img/Mic.png')}}" alt="Stop Recording">
-                </div>
-                <p id="outputText"></p>
-            </div>
-        </div>
-    {% endblock %}
+        {% endblock %}
+    </div>
 </body>
 </html>
