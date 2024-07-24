@@ -1,3 +1,5 @@
+from gevent import monkey
+monkey.patch_all()
 import os
 import json
 import git
@@ -8,19 +10,23 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_behind_proxy import FlaskBehindProxy
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from flask_session import Session
 from forms import RegistrationForm, LoginForm
 from functools import wraps
 import socketio
 from dotenv import load_dotenv
 from openai import OpenAI
 import openai
+import redis
 from db import db, Users, Events, Meets, Emails
 # from gevent import monkey
 # monkey.patch_all()
 
+import logging
+
 # Google Imports
 import datetime
-from datetime import datetime
+from datetime import datetime, timedelta
 from tzlocal import get_localzone
 import uuid
 import base64
@@ -34,11 +40,18 @@ from google.apps import meet_v2
 
 # Flask App setup
 app = Flask(__name__)
-socketio = SocketIO(app)
+socketio = SocketIO(app, async_mode='gevent', manage_session=False)
 load_dotenv()
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 proxied = FlaskBehindProxy(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
+app.config['SESSION_TYPE'] = 'redis'
+app.config['SESSION_PERMANENT'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
+app.config['SESSION_USE_SIGNER'] = True
+redis_url = os.getenv('REDIS_URL')
+app.config['SESSION_REDIS'] = redis.from_url(redis_url)
+Session(app)
 
 # Database setup
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///plan-it.db'
@@ -63,6 +76,7 @@ SCOPES = [
 
 @app.route("/register", methods=['GET', 'POST'])
 def register():
+    app.logger.debug('Register route accessed')
     form = RegistrationForm()
     if form.validate_on_submit():
         existing_user = Users.query.filter_by(email=form.email.data).first()
@@ -80,6 +94,7 @@ def register():
 
 @app.route("/login", methods=['GET', 'POST'])
 def login():
+    app.logger.debug('Login route accessed')
     form = LoginForm()
     if form.validate_on_submit():
         user = Users.query.filter_by(email=form.email.data).first()
@@ -95,6 +110,7 @@ def login():
 
 @app.route("/logout")
 def logout():
+    app.logger.debug('Logout route accessed')
     session.pop('user_id', None)
     print("User ID after logout:", session.get('user_id'))
     flash('You have been logged out.', 'info')
@@ -115,12 +131,14 @@ def login_required(f):
 @app.route('/')
 @app.route('/home')
 def home():
+    app.logger.debug('Home route accessed')
     return render_template('home.html')
 
 
 @app.route('/chat')
 @login_required
 def chat():
+    app.logger.debug('Chat route accessed')
     return render_template('chat.html')
 
 
@@ -221,6 +239,7 @@ def gmail_setup():
             print(f"Failed to set up Gmail service: {e}")
 
 def determine_query_type(message: str):
+    app.logger.debug('Determine query accessed')
     result = {"event_type": "unknown", "mode": "unknown"}  # Default result
 
     try:
@@ -260,6 +279,7 @@ def determine_query_type(message: str):
 
 
 def gpt_format_json(system_instructions: str, input_string: str):
+    app.logger.debug('GPT format accessed')
     try:
         # Make API request
         completion = client.chat.completions.create(
@@ -353,6 +373,7 @@ def find_email_id(prompt, list):
 # noinspection PyPackageRequirements
 @socketio.on('user_prompt')
 def handle_user_prompt(prompt):
+    app.logger.debug('Handle user prompt accessed')
     # add in prompt to dictionary directly
     # saves time on the gpt call in determine_query_type
     prompt_dictionary = determine_query_type(prompt)
@@ -411,6 +432,7 @@ def handle_user_prompt(prompt):
 
 
 def create_event(service, event_data):
+    app.logger.debug('create event accessed')
     event = service.events().insert(
         calendarId='primary',
         body=event_data
@@ -477,6 +499,7 @@ def format_system_instructions_for_event(query_type_dict: dict, content_dict: di
 
 # Create a calendar event
 def gcal_create():
+    app.logger.debug('gcal create accessed')
     prompt_dict = session.get('prompt_dictionary')
 
     # GPT instructions
