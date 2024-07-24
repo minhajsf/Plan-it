@@ -35,7 +35,7 @@ from google.apps import meet_v2
 
 # Flask App setup
 app = Flask(__name__)
-socketio = SocketIO(app, manage_session=False)
+socketio = SocketIO(app, async_mode='gevent', manage_session=False)
 load_dotenv()
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 proxied = FlaskBehindProxy(app)
