@@ -186,21 +186,57 @@ function chatHistory() {
 }
 
 const generalButtonHandler = function(status){
-    const toDiv = document.querySelector('#to-field').value;
-    const subjectDiv = document.querySelector('#subject-field').value;
-    const bodyDiv = document.querySelector('#body-field').value;
+    // Ensure chatBox has children
+    if (!chatBox.lastElementChild) return;
 
-    const response = {
-        'status': status,
-        'email': {
-            'to': toDiv,
-            'subject': subjectDiv,
-            'body': bodyDiv
+    const emailContainer = chatBox.lastElementChild;
+
+    // Ensure emailContainer has children
+    if (!emailContainer.lastElementChild) return;
+
+    const buttonContainer = emailContainer.lastElementChild;
+
+    // Check that buttonContainer has the expected buttons
+    if (buttonContainer.children.length >= 3) {
+        buttonContainer.children[0].removeEventListener('click', quitButtonHandler);
+        buttonContainer.children[1].removeEventListener('click', saveButtonHandler);
+        buttonContainer.children[2].removeEventListener('click', sendButtonHandler);
+    } else {
+        console.error('Button container does not have the expected buttons.');
+        return;
+    }
+
+    // Ensure emailContainer has the expected children
+    if (emailContainer.children.length >= 3) {
+        // gets the input/textarea element from the most recent email container
+        const toDiv = emailContainer.children[0].lastElementChild;
+        const subjectDiv = emailContainer.children[1].lastElementChild;
+        const bodyDiv = emailContainer.children[2].lastElementChild;
+
+        if (toDiv && subjectDiv && bodyDiv) {
+            // Ensure elements are form elements
+            if (toDiv.tagName === 'INPUT' || toDiv.tagName === 'TEXTAREA') toDiv.setAttribute('readonly', true);
+            if (subjectDiv.tagName === 'INPUT' || subjectDiv.tagName === 'TEXTAREA') subjectDiv.setAttribute('readonly', true);
+            if (bodyDiv.tagName === 'INPUT' || bodyDiv.tagName === 'TEXTAREA') bodyDiv.setAttribute('readonly', true);
+
+            const response = {
+                'status': status,
+                'email': {
+                    'to': toDiv.value,
+                    'subject': subjectDiv.value,
+                    'body': bodyDiv.value
+                }
+            };
+            socket.emit('approval-request-response', response);
+
+            // Handle the response object (e.g., send it somewhere or use it)
+        } else {
+            console.error('Expected form elements not found.');
         }
-    };
+    } else {
+        console.error('Email container does not have the expected children.');
+    }
 
-    // Emit the socket event
-    socket.emit('approval-request-response', response);
 };
 
 // Button handlers
@@ -240,7 +276,9 @@ function createEmailDiv(fields) {
     bodyDiv.className = 'body-input-field';
     bodyDiv.innerHTML = `
         <label for="body-field">Body:</label>
-        <input type="text" id="body-field" name="body-field" value="${fields.body}">
+
+        <textarea id="body-field" name="body-field"> ${fields.body} </textarea>
+
     `;
 
     // Create the Button container
@@ -265,25 +303,8 @@ function createEmailDiv(fields) {
 
     container.classList.add('chat-message', 'server');
     chatBox.appendChild(container);
-    console.log(container)
-}
+    chatBox.scrollTop = chatBox.scrollHeight;
 
-// Function to clear existing email containers and their event listeners
-function clearEmailContainers() {
-    const chatBox = document.querySelector('#chatBox');
-
-    // Remove all children from chatBox and their event listeners
-    while (chatBox.firstChild) {
-        // Remove event listeners from all buttons within the removed element
-        const buttons = chatBox.firstChild.querySelectorAll('button');
-        buttons.forEach(button => {
-            button.removeEventListener('click', quitButtonHandler);
-            button.removeEventListener('click', saveButtonHandler);
-            button.removeEventListener('click', sendButtonHandler);
-        });
-
-        chatBox.removeChild(chatBox.firstChild);
-    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -334,6 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
         createEmailDiv(email_json);
 });
 
+
 });
 
 // this code is for the settings "clear" button
@@ -351,6 +373,7 @@ document.getElementById('confirmYes').addEventListener('click', function() {
 document.getElementById('confirmNo').addEventListener('click', function() {
     document.getElementById('confirmationDialog').style.display = 'none';
 });
+
 
 document.getElementById('okBtn').addEventListener('click', function() {
     document.getElementById('secondDialog').style.display = 'none';

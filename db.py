@@ -61,6 +61,7 @@ class Events(db.Model):
     end = db.Column(db.String, nullable=False)
     event_id = db.Column(db.String, nullable=False)
     event_dictionary = db.Column(db.String, nullable=False)
+    link = db.Column(db.String, nullable=False)
 
     def __init__(self, **kwargs):
         """
@@ -73,6 +74,7 @@ class Events(db.Model):
         self.end = kwargs.get("end", "")
         self.event_id = kwargs.get("event_id", "")
         self.event_dictionary = kwargs.get("event_dictionary", "")
+        self.link = kwargs.get("link", "")
 
     def serialize(self):
         """
@@ -86,7 +88,8 @@ class Events(db.Model):
             "start": self.start,
             "end": self.end,
             "event_id": self.event_id,
-            "event_dictionary": self.event_dictionary
+            "event_dictionary": self.event_dictionary,
+            "link": self.link
         }
 
 
@@ -105,6 +108,7 @@ class Meets(db.Model):
     attendees = db.Column(db.String, nullable=False)
     meet_id = db.Column(db.String, nullable=False)
     meet_dictionary = db.Column(db.String, nullable=False)
+    link = db.Column(db.String, nullable=False)
 
     def __init__(self, **kwargs):
         """
@@ -118,6 +122,7 @@ class Meets(db.Model):
         self.attendees = kwargs.get("attendees", "")
         self.meet_id = kwargs.get("meet_id", "")
         self.meet_dictionary = kwargs.get("meet_dictionary", "")
+        self.link = kwargs.get("link", "")
 
     def serialize(self):
         """
@@ -132,7 +137,8 @@ class Meets(db.Model):
             "end": self.end,
             "attendees": self.attendees,
             "meet_id": self.meet_id,
-            "meet_dictionary": self.meet_dictionary
+            "meet_dictionary": self.meet_dictionary,
+            "link": self.link
         }
 
 
@@ -149,6 +155,7 @@ class Emails(db.Model):
     to = db.Column(db.String, nullable=False)
     email_id = db.Column(db.String, nullable=False)
     email_dictionary = db.Column(db.String, nullable=False)
+    link = db.Column(db.String, nullable=False, default='')
 
     def __init__(self, **kwargs):
         """
@@ -161,6 +168,7 @@ class Emails(db.Model):
         self.sender = kwargs.get("sender", "")
         self.email_id = kwargs.get("email_id", "")
         self.email_dictionary = kwargs.get("email_dictionary", "")
+        self.link = kwargs.get("link", "")
 
     def serialize(self):
         """
@@ -175,9 +183,11 @@ class Emails(db.Model):
             "to": self.to,
             "from": self.sender,
             "email_id": self.email_id,
-            "email_dictionary": self.email_dictionary
+            "email_dictionary": self.email_dictionary,
+            "link": self.link
 
         }
+    
 class History(db.Model):
     """
     Table for History

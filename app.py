@@ -1,3 +1,5 @@
+from gevent import monkey
+monkey.patch_all()
 import os
 import json
 import git
@@ -8,17 +10,24 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_behind_proxy import FlaskBehindProxy
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from flask_session import Session
 from forms import RegistrationForm, LoginForm
 from functools import wraps
 import socketio
 from dotenv import load_dotenv
 from openai import OpenAI
 import openai
+import redis
+
 from db import db, Users, Events, Meets, Emails
+# from gevent import monkey
+# monkey.patch_all()
+
+import logging
 
 # Google Imports
 import datetime
-from datetime import datetime
+from datetime import datetime, timedelta
 from tzlocal import get_localzone
 import uuid
 import base64
@@ -32,12 +41,18 @@ from google.apps import meet_v2
 
 # Flask App setup
 app = Flask(__name__)
-socketio = SocketIO(app)
+socketio = SocketIO(app, async_mode='gevent', manage_session=False)
 load_dotenv()
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 proxied = FlaskBehindProxy(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
-
+app.config['SESSION_TYPE'] = 'redis'
+app.config['SESSION_PERMANENT'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
+app.config['SESSION_USE_SIGNER'] = True
+redis_url = os.getenv('REDIS_URL')
+app.config['SESSION_REDIS'] = redis.from_url(redis_url)
+Session(app)
 
 # Database setup
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///plan-it.db'
@@ -48,25 +63,22 @@ db.init_app(app)
 with app.app_context():
     db.create_all()
 
-
 # ChatGPT API Setup
 client = OpenAI(
     api_key=OPENAI_API_KEY,
 )
 
-SCOPES = ['https://www.googleapis.com/auth/calendar',
-          'https://www.googleapis.com/auth/calendar.events',
-          'https://www.googleapis.com/auth/meetings.space.created']
-GMAIL_SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
-
-
-@app.route('/')
-def root():
-    return redirect(url_for('home'))
+SCOPES = [
+    'https://www.googleapis.com/auth/calendar',
+    'https://www.googleapis.com/auth/gmail.send',
+    'https://www.googleapis.com/auth/gmail.modify',
+    'https://www.googleapis.com/auth/gmail.readonly'
+]
 
 
 @app.route("/register", methods=['GET', 'POST'])
 def register():
+    app.logger.debug('Register route accessed')
     form = RegistrationForm()
     if form.validate_on_submit():
         existing_user = Users.query.filter_by(email=form.email.data).first()
@@ -84,6 +96,7 @@ def register():
 
 @app.route("/login", methods=['GET', 'POST'])
 def login():
+    app.logger.debug('Login route accessed')
     form = LoginForm()
     if form.validate_on_submit():
         user = Users.query.filter_by(email=form.email.data).first()
@@ -99,6 +112,7 @@ def login():
 
 @app.route("/logout")
 def logout():
+    app.logger.debug('Logout route accessed')
     session.pop('user_id', None)
     print("User ID after logout:", session.get('user_id'))
     flash('You have been logged out.', 'info')
@@ -116,21 +130,31 @@ def login_required(f):
     return decorated_function
 
 
+@app.route('/')
 @app.route('/home')
 def home():
+    app.logger.debug('Home route accessed')
     return render_template('home.html')
 
 
 @app.route('/chat')
 @login_required
 def chat():
+    app.logger.debug('Chat route accessed')
     return render_template('chat.html')
 
 
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    return render_template('dashboard.html')
+    try:
+        events_list = Events.query.filter_by(user_id=session['user_id']).order_by(Events.start).limit(10).all()
+        meets_list = Meets.query.filter_by(user_id=session['user_id']).order_by(Meets.start).limit(10).all()
+        emails_list = Emails.query.filter_by(user_id=session['user_id']).limit(10).all()
+        return render_template('dashboard.html', events=events_list, meets=meets_list, emails=emails_list)
+    except Exception as e:
+        # Exception as the exception makes debugging really difficult. Avoid using them plz
+        print(f"Error fetching data from database: {e}", file=sys.stderr)
 
 
 @app.route('/voice')
@@ -170,74 +194,58 @@ def save_user_token(uid, creds):
         db.session.commit()
 
 
-def google_setup():
-    """
-    Google Auth & Service.
-    """
-    def get_google_service():
-        if hasattr(g, 'service'):
-            print("Service already exists", file=sys.stderr)
-            return
-        print("Service does not exist", file=sys.stderr)
-        user_id = session['user_id']  # Get user_id from session
-        creds = get_user_token(user_id)
+def get_google_service():
+    user_id = session.get('user_id')  # Get user_id from session
+    if not user_id:
+        raise ValueError("User ID is not set in the session.")
 
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
+    creds = get_user_token(user_id)
+
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            try:
+
                 creds.refresh(Request())
                 save_user_token(user_id, creds)
-            else:
+            except Exception as e:
+                print(f"Failed to refresh credentials: {e}")
+                raise
+        else:
+            try:
                 flow = InstalledAppFlow.from_client_secrets_file(
                     "credentials.json", SCOPES
                 )
                 creds = flow.run_local_server(port=8080)
                 save_user_token(user_id, creds)
-        return build("calendar", "v3", credentials=creds)
-    
+            except Exception as e:
+                print(f"Failed to create new credentials: {e}")
+                raise
+
+    return creds
+
+
+def google_setup():
     if not hasattr(g, 'service'):
-        # global used throughout gcal, gmeet, and/or gmail
-        g.service = get_google_service()
+        try:
+            creds = get_google_service()
+            g.service = build("calendar", "v3", credentials=creds)
+        except Exception as e:
+            print(f"Failed to set up Google Calendar service: {e}")
+
 
 
 def gmail_setup():
-    def get_google_service():
-        print("google_setup route hit", file=sys.stderr)
-        if hasattr(g, 'service'):
-            print("Service already exists", file=sys.stderr)
-            return
-        print("Service does not exist", file=sys.stderr)
-        user_id = session['user_id']  # Mock user
-        print("1", file=sys.stderr)
-        creds = get_user_token(user_id)
-        print("2", file=sys.stderr)
-
-        if not creds or not creds.valid:
-            print("3", file=sys.stderr)
-            if creds and creds.expired and creds.refresh_token:
-                print("4", file=sys.stderr)
-                creds.refresh(Request())
-                print("5", file=sys.stderr)
-                save_user_token(user_id, creds)
-                print("6", file=sys.stderr)
-            else:
-                print("7", file=sys.stderr)
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    "credentials.json", SCOPES
-                )
-                print("8", file=sys.stderr)
-                creds = flow.run_local_server(port=8080)
-                print("9", file=sys.stderr)
-                save_user_token(user_id, creds)
-                print("10", file=sys.stderr)
-
-        g.service = build("calendar", "v3", credentials=creds)
-        g.email = build("gmail", "v1", credentials=creds)
-        print(g.email)
-    if not hasattr(g, 'service') or not hasattr(g, 'email'):
-        print("0", file=sys.stderr)
-        get_google_service()
+    if not hasattr(g, 'email'):
+        try:
+            creds = get_google_service()
+            g.email = build("gmail", "v1", credentials=creds)
+        except Exception as e:
+            print(f"Failed to set up Gmail service: {e}")
 
 def determine_query_type(message: str):
+
+    app.logger.debug('Determine query accessed')
+
     result = {"event_type": "unknown", "mode": "unknown"}  # Default result
 
     try:
@@ -277,6 +285,7 @@ def determine_query_type(message: str):
 
 
 def gpt_format_json(system_instructions: str, input_string: str):
+    app.logger.debug('GPT format accessed')
     try:
         # Make API request
         completion = client.chat.completions.create(
@@ -370,10 +379,11 @@ def find_email_id(prompt, list):
 # noinspection PyPackageRequirements
 @socketio.on('user_prompt')
 def handle_user_prompt(prompt):
-
+    app.logger.debug('Handle user prompt accessed')
     # add in prompt to dictionary directly
     # saves time on the gpt call in determine_query_type
     prompt_dictionary = determine_query_type(prompt)
+
     print(prompt_dictionary)
 
     if prompt_dictionary == {"event_type": "unknown", "mode": "unknown"}:
@@ -395,6 +405,8 @@ def handle_user_prompt(prompt):
     # TRY eval(f"{event_type}_{mode}()")
     try:
         google_setup()
+        gmail_setup()
+
 
         # Send success message to chat reciever-end
         print(f"Event Type: {event_type}, Mode: {mode}")
@@ -408,9 +420,11 @@ def handle_user_prompt(prompt):
         else:
             user_event = "Gmail draft"
 
+
         socketio.emit('receiver', {'message': f"Sure thing! {user_mode}ing your {user_event}..."})
+
         success_message = eval(f"{event_type}_{mode}()")
-        
+
         return success_message
 
     except Exception as e:
@@ -421,6 +435,7 @@ def handle_user_prompt(prompt):
         print(f"Error: {e}", file=sys.stderr)
         return failure_message
 
+
 #
 # -----------------------------------------------------------------------
 # GCAL ROUTES
@@ -429,6 +444,7 @@ def handle_user_prompt(prompt):
 
 
 def create_event(service, event_data):
+    app.logger.debug('create event accessed')
     event = service.events().insert(
         calendarId='primary',
         body=event_data
@@ -495,6 +511,7 @@ def format_system_instructions_for_event(query_type_dict: dict, content_dict: di
 
 # Create a calendar event
 def gcal_create():
+    app.logger.debug('gcal create accessed')
 
     prompt_dict = session.get('prompt_dictionary')
 
@@ -504,27 +521,31 @@ def gcal_create():
     if hasattr(format_instruction, 'error'):
         print("Not enough info. Please try again")
         socketio.emit('receiver', {'message': 'Not enough information. Please try again'})
-        return 
-    
+        return
 
-
-    # GPT response as JSON
+        # GPT response as JSON
     event_data = gpt_format_json(format_instruction, prompt_dict['prompt'])
 
     event = create_event(g.service, event_data)
 
-    new_event = Events(
-        user_id=session['user_id'],
-        title=event_data.get("summary"),
-        description=event_data.get("description"),
-        start=event_data.get("start").get("dateTime"),
-        end=event_data.get("end").get("dateTime"),
-        event_id=event.get("id"),
-        event_dictionary=json.dumps(event_data)
-    )
+    try:
+        new_event = Events(
+            user_id=session['user_id'],
+            title=event_data.get("summary"),
+            description=event_data.get("description"),
+            start=event_data.get("start").get("dateTime"),
+            end=event_data.get("end").get("dateTime"),
+            event_id=event.get("id"),
+            event_dictionary=json.dumps(event_data),
+            link=event.get("htmlLink")
+        )
 
-    db.session.add(new_event)
-    db.session.commit()
+        db.session.add(new_event)
+        db.session.commit()
+    except Exception as e:
+        db_failure_message = f"Error creating event in db. {e}"
+        print(db_failure_message, file=sys.stderr)
+        socketio.emit('receiver', {'message': db_failure_message})
 
     event_description = f"""Event Created! Check your Google Calendar to confirm!\n
     Event Details:
@@ -593,16 +614,22 @@ def gcal_update():
 
     updated_event = update_event(g.service, event_id, event_data)
 
-    # event is current entry
-    # update the event attributes in the database
-    event.title = event_data.get('summary')
-    event.description = event_data.get('description')
-    event.start = event_data.get('start').get('dateTime')
-    event.end = event_data.get('end').get('dateTime')
-    event.event_id = updated_event.get('id')
-    event.event_dictionary = json.dumps(event_data)
+    try:
+        # event is current entry
+        # update the event attributes in the database
+        event.title = event_data.get('summary')
+        event.description = event_data.get('description')
+        event.start = event_data.get('start').get('dateTime')
+        event.end = event_data.get('end').get('dateTime')
+        event.event_id = updated_event.get('id')
+        event.event_dictionary = json.dumps(event_data)
+        event.link = updated_event.get('htmlLink')
 
-    db.session.commit()
+        db.session.commit()
+    except Exception as e:
+        db_failure_message = f"Error updating event in db. {e}"
+        print(db_failure_message, file=sys.stderr)
+        socketio.emit('receiver', {'message': db_failure_message})
 
     event_description = f"""Event Updated! Check your Google Calendar to confirm!\n
     Event Details:
@@ -651,7 +678,6 @@ def gcal_remove():
 
     print(event)
 
-    # remove it from calendar
     remove_event(g.service, event.event_id)
 
     event_description = f"""Event Deleted!\n
@@ -662,16 +688,19 @@ def gcal_remove():
     End Time: {event.end}
     """
 
-    # remove from our db
-    db.session.delete(event)
-    db.session.commit()
+    try:
+        # remove from our db
+        db.session.delete(event)
+        db.session.commit()
+    except Exception as e:
+        db_failure_message = f"Error deleting event in db. {e}"
+        print(db_failure_message, file=sys.stderr)
+        socketio.emit('receiver', {'message': db_failure_message})
 
     print("Event has been deleted successfully.")
     socketio.emit('receiver', {'message': event_description})
 
     return event_description
-
-    
 
 
 #
@@ -773,7 +802,7 @@ def gmeet_create():
 
     # No content dict bc create
     instructions = format_system_instructions_for_meeting(prompt_dict)
-    
+
     event_data = gpt_format_json(instructions, prompt_dict['prompt'])
     print(event_data)
     if event_data.get('error'):
@@ -786,19 +815,25 @@ def gmeet_create():
     event = create_google_meet(g.service, event_data)
 
     # Create new Meet for our db
-    new_meeting = Meets(
-        user_id=session['user_id'],
-        summary=event_data.get('summary'),
-        description=event_data.get('description'),
-        start=event_data.get('start').get('dateTime'),
-        end=event_data.get('end').get('dateTime'),
-        meet_id=event.get('id'),
-        attendees=json.dumps((event_data.get('attendees'))),
-        meet_dictionary=json.dumps(event_data)
-    )
+    try:
+        new_meeting = Meets(
+            user_id=session['user_id'],
+            summary=event_data.get('summary'),
+            description=event_data.get('description'),
+            start=event_data.get('start').get('dateTime'),
+            end=event_data.get('end').get('dateTime'),
+            meet_id=event.get('id'),
+            attendees=json.dumps((event_data.get('attendees'))),
+            meet_dictionary=json.dumps(event_data),
+            link=event.get('htmlLink')
+        )
 
-    db.session.add(new_meeting)
-    db.session.commit()
+        db.session.add(new_meeting)
+        db.session.commit()
+    except Exception as e:
+        db_failure_message = f"Error creating meeting in db. {e}"
+        print(db_failure_message, file=sys.stderr)
+        socketio.emit('receiver', {'message': db_failure_message})
 
     event_description = f"""Meeting created!\n
     Event Details:
@@ -810,8 +845,8 @@ def gmeet_create():
     print("Meeting has been created successfully.")
 
     socketio.emit('receiver', {'message': event_description})
-    
-    
+
+
 def gmeet_update():
     prompt_dict = session.get('prompt_dictionary')
     user_prompt = session['prompt_dictionary']['prompt']
@@ -829,7 +864,8 @@ def gmeet_update():
 
     # Filter events then send to API to find id
     filtered_meetings = [[{"meet_id": meeting.meet_id}, meeting.meet_dictionary] for meeting in meetings if any(
-        keyword.lower() in meeting.summary.lower() or keyword.lower() in meeting.description.lower() for keyword in keywords)]
+        keyword.lower() in meeting.summary.lower() or keyword.lower() in meeting.description.lower() for keyword in
+        keywords)]
     print(filtered_meetings)
 
     if not filtered_meetings:
@@ -840,7 +876,7 @@ def gmeet_update():
     mid = find_meeting_id(user_prompt, filtered_meetings)
     if mid == 'invalid':
         print("Not enough information, please try again?")
-        socketio.emit('receiver', {'message': 'Not enough information, please try again?'}) 
+        socketio.emit('receiver', {'message': 'Not enough information, please try again?'})
         return
     # query event from database
     # event = Events.query.filter_by(title=prompt_dict.get('title')).first()
@@ -878,12 +914,14 @@ def gmeet_update():
         meeting.attendees = json.dumps(event_data.get('attendees'))
         meeting.meet_dictionary = json.dumps(event_data)
 
+        meeting.link = event.get('htmlLink')
+
+
         db.session.commit()
     except Exception as e:
         db_failure_message = f"Error updating meeting in db. {e}"
         print(db_failure_message, file=sys.stderr)
         socketio.emit('receiver', {'message': db_failure_message})
-        
 
     event_description = f"""Meeting updated!\n
     Event Details:
@@ -896,6 +934,7 @@ def gmeet_update():
     print("Meeting updated successfully.")
 
     socketio.emit('receiver', {'message': event_description})
+
 
 def gmeet_remove():
     user_prompt = session['prompt_dictionary']['prompt']
@@ -913,7 +952,8 @@ def gmeet_remove():
 
     # Filter events then send to API to find id
     filtered_meetings = [[{"meet_id": meeting.meet_id}, meeting.meet_dictionary] for meeting in meetings if any(
-        keyword.lower() in meeting.summary.lower() or keyword.lower() in meeting.description.lower() for keyword in keywords)]
+        keyword.lower() in meeting.summary.lower() or keyword.lower() in meeting.description.lower() for keyword in
+        keywords)]
     print(filtered_meetings)
 
     if not filtered_meetings:
@@ -935,10 +975,14 @@ def gmeet_remove():
     # remove it from calendar
     delete_google_meet(g.service, meeting_to_remove.meet_id)
 
-    # remove from our db
-    db.session.delete(meeting_to_remove)
-    db.session.commit()
-
+    try:
+        # remove from our db
+        db.session.delete(meeting_to_remove)
+        db.session.commit()
+    except Exception as e:
+        db_failure_message = f"Error deleting meeting in db. {e}"
+        print(db_failure_message, file=sys.stderr)
+        socketio.emit('receiver', {'message': db_failure_message})
 
     event_description = f"""Meeting removed!\n
     Event Details:
@@ -963,14 +1007,14 @@ def get_authenticated_user_email(service):
         profile = service.users().getProfile(userId='me').execute()
         return profile['emailAddress']
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"An error occurred getting user email: {e}")
         return None
 
 
 def email_json_to_raw(email_json):
     from_field = get_authenticated_user_email(g.email)  # Assuming `from_list` has a single email
     to_field = email_json['to']
-    cc_field = ', '.join(email_json['cc']) if email_json['cc'] else ''
+    cc_field = ', '.join(email_json.get('cc')) if email_json.get('cc') else ''
 
     raw_email = f"""From: {from_field}
 To: {to_field}
@@ -1017,9 +1061,8 @@ def create_gmail_draft(service, message_body_raw):
         draft = service.users().drafts().create(userId='me', body=message).execute()
         return draft
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"An error occurred in create gmail draft: {e}")
         return None
-
 
 
 def update_gmail_draft(service, draft_id, updated_message_body_raw):
@@ -1033,8 +1076,9 @@ def update_gmail_draft(service, draft_id, updated_message_body_raw):
             userId='me', id=draft_id, body=message).execute()
         return draft
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"An error occurred updating email draft: {e}")
         return None
+
 
 def send_gmail_draft(service, draft_id):
     try:
@@ -1044,7 +1088,7 @@ def send_gmail_draft(service, draft_id):
         print("Draft sent successfully")
         # return draft
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"An error occurred sending gmail draft: {e}")
 
 
 def delete_gmail_draft(service, draft_id):
@@ -1053,23 +1097,28 @@ def delete_gmail_draft(service, draft_id):
         service.users().drafts().delete(userId='me', id=draft_id).execute()
         print("Draft deleted successfully.")
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"An error occurred deleting a draft: {e}")
 
 
 @socketio.on('approval-request-response')
 def handle_approval_response(response):
+    gmail_setup()
     status = response.get('status')
     email_json = response.get('email')
     if email_json and (status == 'save' or status == 'send'):
         email_raw = email_json_to_raw(email_json)
+
+        print("g.email: ", g.email)
+
         draft = create_gmail_draft(g.email, email_raw)
         draft_id = draft.get('id')
         if status == 'send':
             send_gmail_draft(g.email, draft_id)
-            print("Gmail draft created successfully")
+
+            print("Gmail draft sent successfully")
+
         elif status == 'save':
             # add stuff here for other fields
-
             newly_drafted_email = Emails(
                 subject=email_json['subject'],
                 body=email_json['body'],
@@ -1080,9 +1129,11 @@ def handle_approval_response(response):
                 cc=email_json.get('cc'),
                 email_id=draft.get('id'),
                 email_dictionary=json.dumps(email_json),
+                link=f"https://mail.google.com/mail/u/0/#drafts?compose={draft.get('id')}"
             )
             db.session.add(newly_drafted_email)
             db.session.commit()
+
     # technically there is a 'quit' but it's not anywhere, so we just ignore the data
 
 
@@ -1090,6 +1141,8 @@ def handle_approval_response(response):
 def gmail_create():
     prompt_dict = session.get('prompt_dictionary')
     prompt = prompt_dict.get('prompt')
+
+    print(g.email)
 
     content_dict = {'from': f"{get_authenticated_user_email(g.email)}"}
     instructions = format_system_instructions_for_gmail(
@@ -1119,7 +1172,8 @@ def gmail_send():
 
     # Filter events then send to API to find id
     filtered_emails = [[{"meet_id": email.email_id}, email.email_dictionary] for email in emails if any(
-        keyword.lower() in email.summary.lower() or keyword.lower() in email.description.lower() for keyword in keywords)]
+        keyword.lower() in email.subject.lower() or keyword.lower() in email.description.lower() for keyword in
+        keywords)]
     print(filtered_emails)
 
     if not filtered_emails:
@@ -1130,6 +1184,7 @@ def gmail_send():
     if email_id == 'invalid':
         print("Not enough information, please try again?")
         return
+
     # query event from database
     # event = Events.query.filter_by(title=prompt_dict.get('title')).first()
     email_to_send = Emails.query.filter_by(
@@ -1139,9 +1194,14 @@ def gmail_send():
     if email_to_send:
         send_gmail_draft(g.email, email_to_send.email_id)
 
-        # remove from db bc its sent, so you can't edit it again anyway
-        db.session.delete(email_to_send)
-        db.session.commit()
+        try:
+            # remove from db bc its sent, so you can't edit it again anyway
+            db.session.delete(email_to_send)
+            db.session.commit()
+        except Exception as e:
+            db_failure_message = f"Error removing draft from db. {e}"
+            print(db_failure_message, file=sys.stderr)
+            socketio.emit('receiver', {'message': db_failure_message})
 
 
 def gmail_delete():
@@ -1161,7 +1221,8 @@ def gmail_delete():
 
     # Filter events then send to API to find id
     filtered_emails = [[{"meet_id": email.email_id}, email.email_dictionary] for email in emails if any(
-        keyword.lower() in email.summary.lower() or keyword.lower() in email.description.lower() for keyword in keywords)]
+        keyword.lower() in email.summary.lower() or keyword.lower() in email.body.lower() for keyword in
+        keywords)]
     print(filtered_emails)
 
     if not filtered_emails:
@@ -1181,9 +1242,17 @@ def gmail_delete():
     if draft_to_delete:
         # delete from our db
         draft_id = draft_to_delete.email_id
-        delete_gmail_draft(g.email, draft_id)
-        db.session.delete(draft_to_delete)
-        db.session.commit()
+
+        delete_gmail_draft(g.gmail_service, draft_id)
+
+        try:
+            db.session.delete(draft_to_delete)
+            db.session.commit()
+        except Exception as e:
+            db_failure_message = f"Error deleting draft in db. {e}"
+            print(db_failure_message, file=sys.stderr)
+            socketio.emit('receiver', {'message': db_failure_message})
+
 
 @app.route("/update_server", methods=['POST'])
 def webhook():
