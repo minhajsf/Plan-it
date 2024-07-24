@@ -15,8 +15,8 @@ from dotenv import load_dotenv
 from openai import OpenAI
 import openai
 from db import db, Users, Events, Meets, Emails
-from gevent import monkey
-monkey.patch_all()
+# from gevent import monkey
+# monkey.patch_all()
 
 # Google Imports
 import datetime
@@ -54,12 +54,12 @@ client = OpenAI(
     api_key=OPENAI_API_KEY,
 )
 
-SCOPES = ['https://www.googleapis.com/auth/calendar',
-          'https://www.googleapis.com/auth/calendar.events',
-          'https://www.googleapis.com/auth/meetings.space.created']
-GMAIL_SCOPES = ['https://www.googleapis.com/auth/gmail.send',
-                'https://www.googleapis.com/auth/gmail.modify',
-                'https://www.googleapis.com/auth/gmail.readonly']
+SCOPES = [
+    'https://www.googleapis.com/auth/calendar',
+    'https://www.googleapis.com/auth/gmail.send',
+    'https://www.googleapis.com/auth/gmail.modify',
+    'https://www.googleapis.com/auth/gmail.readonly'
+]
 
 @app.route("/register", methods=['GET', 'POST'])
 def register():
@@ -174,65 +174,51 @@ def save_user_token(uid, creds):
         db.session.commit()
 
 
-def google_setup():
-    def get_google_service():
-        user_id = session['user_id']  # Get user_id from session
-        creds = get_user_token(user_id)
+def get_google_service():
+    user_id = session.get('user_id')  # Get user_id from session
+    if not user_id:
+        raise ValueError("User ID is not set in the session.")
 
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
+    creds = get_user_token(user_id)
+
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            try:
                 creds.refresh(Request())
                 save_user_token(user_id, creds)
-            else:
+            except Exception as e:
+                print(f"Failed to refresh credentials: {e}")
+                raise
+        else:
+            try:
                 flow = InstalledAppFlow.from_client_secrets_file(
                     "credentials.json", SCOPES
                 )
                 creds = flow.run_local_server(port=8080)
                 save_user_token(user_id, creds)
-        return build("calendar", "v3", credentials=creds)
+            except Exception as e:
+                print(f"Failed to create new credentials: {e}")
+                raise
 
+    return creds
+
+
+def google_setup():
     if not hasattr(g, 'service'):
-        # global used throughout gcal, gmeet, and/or gmail
-        g.service = get_google_service()
+        try:
+            creds = get_google_service()
+            g.service = build("calendar", "v3", credentials=creds)
+        except Exception as e:
+            print(f"Failed to set up Google Calendar service: {e}")
 
 
 def gmail_setup():
-    def get_gmail_service():
-        user_id = session.get('user_id')  # Get user_id from session
-        if not user_id:
-            raise ValueError("User ID is not set in the session.")
-
-        creds = get_user_token(user_id)
-
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                try:
-                    creds.refresh(Request())
-                    save_user_token(user_id, creds)
-                except Exception as e:
-                    print(f"Failed to refresh credentials: {e}")
-                    # Handle the exception (e.g., prompt user to re-authenticate)
-                    raise
-            else:
-                try:
-                    flow = InstalledAppFlow.from_client_secrets_file(
-                        "credentials.json", GMAIL_SCOPES
-                    )
-                    creds = flow.run_local_server(port=8080)
-                    save_user_token(user_id, creds)
-                except Exception as e:
-                    print(f"Failed to create new credentials: {e}")
-                    # Handle the exception (e.g., prompt user to check credentials)
-                    raise
-
-        return build("gmail", "v1", credentials=creds)
-
     if not hasattr(g, 'email'):
         try:
-            g.email = get_gmail_service()
+            creds = get_google_service()
+            g.email = build("gmail", "v1", credentials=creds)
         except Exception as e:
             print(f"Failed to set up Gmail service: {e}")
-            # Handle the exception (e.g., log it or notify the user)
 
 def determine_query_type(message: str):
     result = {"event_type": "unknown", "mode": "unknown"}  # Default result
@@ -1082,7 +1068,7 @@ def handle_approval_response(response):
         draft_id = draft.get('id')
         if status == 'send':
             send_gmail_draft(g.email, draft_id)
-            print("Gmail draft created successfully")
+            print("Gmail draft sent successfully")
         elif status == 'save':
             # add stuff here for other fields
             newly_drafted_email = Emails(
@@ -1134,7 +1120,7 @@ def gmail_send():
 
     # Filter events then send to API to find id
     filtered_emails = [[{"meet_id": email.email_id}, email.email_dictionary] for email in emails if any(
-        keyword.lower() in email.summary.lower() or keyword.lower() in email.description.lower() for keyword in
+        keyword.lower() in email.subject.lower() or keyword.lower() in email.description.lower() for keyword in
         keywords)]
     print(filtered_emails)
 
@@ -1183,7 +1169,7 @@ def gmail_delete():
 
     # Filter events then send to API to find id
     filtered_emails = [[{"meet_id": email.email_id}, email.email_dictionary] for email in emails if any(
-        keyword.lower() in email.summary.lower() or keyword.lower() in email.description.lower() for keyword in
+        keyword.lower() in email.summary.lower() or keyword.lower() in email.body.lower() for keyword in
         keywords)]
     print(filtered_emails)
 
