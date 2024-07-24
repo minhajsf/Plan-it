@@ -16,7 +16,7 @@ const overlay = document.getElementById("overlay");
 const textarea = document.getElementById('prompt');
 const charCount = document.getElementById('charCount');
 const maxLength = parseInt(textarea.getAttribute('maxlength'));
-const socket = io();
+let socket = io();
 
 
 let response = "";
