@@ -1,4 +1,3 @@
-
 html, body {
     height: 100%; 
     margin: 0; 
@@ -17,14 +16,37 @@ body {
     left: 0; 
            
 }
+.alert {
+    width: 300px; /* Rectangle width */
+    height: 50px; /* Rectangle height */
+    margin: 10px auto; /* Center the alert and add some margin */
+    opacity: 0; /* Start with the alert invisible */
+    transform: translateX(100%); /* Start from the right */
+    animation: slideIn 0.5s forwards; /* Animation to slide in */
+    
+    
+}
+
+@keyframes slideIn {
+    to {
+        transform: translateX(0); /* End at original position */
+        opacity: 1; /* Fully visible */
+    }
+}
 .preformatted {
     white-space: pre-wrap; 
 }
 .navbar, .navbar a{
     color: white;
 }
+.navbar img {
+    margin-top: -15px;
+    width: 10%;
+    height: 100px;
+}
 .nav-link {
-    margin-left: 30px;
+    margin-left: 40px;
+    margin-top: 25px;
 }
 #startButton, #stopButton { 
     margin: 15px 10px 5px 5px;
@@ -391,19 +413,29 @@ body {
 }
 #body-field  {
     background: transparent;
-    border: 1px solid white;
+    color: white;
     width: 500px;
     height: 200px;
+    border-bottom: 1px solid white;
+    border-left: none;
+    border-right: none;
+    border-top: none;
 }
 #subject-field {
     background: transparent;
-    border: 1px solid white;
+    color: white;
     width: 435px;
+    border: none;
+    
 }
 #to-field {
     background: transparent;
-    border: 1px solid white;
+    color: white;
     width: 473px;
+    border: none;
+}
+.wrapper {
+    border-bottom: 1px solid white;
 }
 
 .disabled-button {

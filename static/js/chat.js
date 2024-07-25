@@ -49,6 +49,7 @@ if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
             const transcript = event.results[i][0].transcript;
             if (event.results[i].isFinal) {
                 response += transcript + ' ';
+                
             } else {
                 interimTranscript += transcript;
             }
@@ -125,7 +126,6 @@ socket.on('redirect_to_app', (data) => {
 
 function sendPrompt() {
     if (startButton.style.display === 'none') {
-                
         stopButton.click(); 
     }
 
@@ -259,16 +259,20 @@ function createEmailDiv(fields) {
     const toDiv = document.createElement('div');
     toDiv.className = 'to-input-field';
     toDiv.innerHTML = `
-        <label for="to-field">To:</label>
-        <input type="text" id="to-field" name="to-field" value="${fields.to}">
+        <div class = "wrapper">
+            <label for="to-field">To:</label>
+            <input type="text" id="to-field" name="to-field" placeholder: "To" value="${fields.to}">
+        </div>
     `;
 
     // Create the Subject field
     const subjectDiv = document.createElement('div');
     subjectDiv.className = 'subject-input-field';
     subjectDiv.innerHTML = `
+        <div class = "wrapper">
         <label for="subject-field">Subject:</label>
-        <input type="text" id="subject-field" name="subject-field" value="${fields.subject}">
+        <input type="text" id="subject-field" name="subject-field" placeholder = "Subject" value="${fields.subject}">
+        </div>
     `;
 
     // Create the Body field
@@ -276,7 +280,7 @@ function createEmailDiv(fields) {
     bodyDiv.className = 'body-input-field';
     bodyDiv.innerHTML = `
 
-        <textarea id="body-field" name="body-field" placeholder="Type your body...">  ${fields.body} </textarea>
+        <textarea id="body-field" name="body-field" placeholder="Type your body...">${fields.body}</textarea>
 
     `;
 

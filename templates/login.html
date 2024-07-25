@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../static/img/Asset%204.png" type="image/png">
     <title>Login Page</title>
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
@@ -13,15 +14,8 @@
 </head>
 <body>
 {% block content %}
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
         <nav class="navbar navbar-expand-lg black">
-            <h1>Plan-it</h1>
+            <img src = "../static/img/AssetNew.png">
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav mr-auto">
                     <li class="nav-item">
@@ -30,6 +24,13 @@
                 </ul>
             </div>
         </nav>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }}" style = "background: rgba(255, 255, 255, 0.1); color: white; border: none; height: 75px;">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
         <div id="login-form" class="form-section">
             <h2>Login</h2>
             <form method="POST" class="mb-3">

@@ -102,11 +102,17 @@ def login():
     if form.validate_on_submit():
         user = Users.query.filter_by(email=form.email.data).first()
         if user and user.check_password(form.password.data):
+            if session.get('user_id'):
+                flash('You are already logged in.', 'info')
+                return redirect(url_for('chat'))
             login_user(user)
             session['user_id'] = user.id
             flash(f'Login successful for {form.email.data}', 'success')
             return redirect(url_for('chat'))
         else:
+            if session.get('user_id'):
+                flash('You are already logged in.', 'info')
+                return redirect(url_for('chat'))
             flash('Login Unsuccessful. Please check email and password', 'danger')
             return redirect(url_for('login'))
     return render_template('login.html', title='Login', form=form)
@@ -1291,4 +1297,4 @@ def webhook():
 
 
 if __name__ == "__main__":
-    socketio.run(app, debug=False, port=5000)
+    socketio.run(app, debug=True, port=5000)

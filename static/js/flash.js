@@ -4,7 +4,7 @@ function removeFlashMessages() {
     flashMessages.forEach((message) => {
         setTimeout(() => {
             message.style.display = 'none';
-        }, 2000); // 3000 milliseconds = 3 seconds
+        }, 2100); // 3000 milliseconds = 3 seconds
     });
 }
 
