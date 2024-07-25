@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 import openai
 from db import db, Users, Events, Meets, Emails
-import gevent
+
 import logging
 
 # Google Imports
@@ -35,15 +35,12 @@ from google.apps import meet_v2
 
 # Flask App setup
 app = Flask(__name__)
-socketio = SocketIO(app,
-                    logger=True,
-                    engineio_logger=True,
-                    cors_allowed_origins="*"
-                    )
+socketio = SocketIO(app)
 load_dotenv()
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 proxied = FlaskBehindProxy(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
+
 
 # Database setup
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///plan-it.db'
@@ -70,11 +67,9 @@ SCOPES = [
     'https://www.googleapis.com/auth/gmail.readonly'
 ]
 
-
 @login_manager.user_loader
 def load_user(user_id):
     return Users.query.get(int(user_id))
-
 
 @app.route("/register", methods=['GET', 'POST'])
 def register():
@@ -102,7 +97,7 @@ def login():
         user = Users.query.filter_by(email=form.email.data).first()
         if user and user.check_password(form.password.data):
             login_user(user)
-            session['user_id'] = user.id
+            session['user_id'] = user.id 
             flash(f'Login successful for {form.email.data}', 'success')
             return redirect(url_for('chat'))
         else:
@@ -260,7 +255,8 @@ def determine_query_type(message: str):
                  "content": """You are an assistant that determines if a message is related to either Google Calendar,
                              Google Meet, or Gmail. Return a json response as {'event_type': , 
                              'mode': } where type is gcal, gmeet, or gmail. If the type is gcal or gmeet, the mode
-                             can be create, update, or remove. For email, the mode can be create, remove or send.
+                             can be create, update, or remove. For email, the mode can be create or send. For email, 
+                             If the user is asking to "write" or "create" an email, the mode is create, not send.
                              If you are not sure, return <{"event_type": "unknown", "mode": "unknown"}> without <>
                              exactly.
                              """},
@@ -409,7 +405,9 @@ def handle_user_prompt(prompt):
 
         # Send success message to chat reciever-end
         print(f"Event Type: {event_type}, Mode: {mode}")
-            
+        user_mode = mode.capitalize()
+        if mode != "send":
+            user_mode = mode[:-1]
         if event_type == "gmeet":
             user_event = "Google Meeting"
         elif event_type == "gcal":
@@ -426,7 +424,7 @@ def handle_user_prompt(prompt):
 
     except Exception as e:
         failure_message = """Please try again. The program only works for GCal -> (Create, Update, and Remove),
-              GMeet -> (Create, Update, or Remove), or Gmail -> (Create, Update, Send, and Delete)"""
+              GMeet -> (Create, Update, or Remove), or Gmail -> (Create, Send, and Delete)"""
         print("Exception thrown in handle_user_prompt at bottom try-catch",
               file=sys.stderr)
         socketio.emit('receiver', {'message': failure_message})
@@ -469,7 +467,7 @@ def remove_event(service, event_id):
 def format_system_instructions_for_event(query_type_dict: dict, content_dict: dict = None) -> str:
     timeZone = get_localzone()
     current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-
+    
     summary = content_dict.get('summary') if content_dict else '<summary_here>'
     description = content_dict.get(
         'description') if content_dict else '<extra specifications, locations, and descriptions here>'
@@ -543,7 +541,6 @@ def gcal_create():
     except Exception as e:
         db_failure_message = f"Error creating event in db. Try again?"
         print(db_failure_message, file=sys.stderr)
-        print(e, file=sys.stderr)
         socketio.emit('receiver', {'message': db_failure_message})
 
     event_description = f"""Event Created! Check your Google Calendar to confirm!\n
@@ -1049,6 +1046,7 @@ def format_system_instructions_for_gmail(query_type_dict: dict, content_dict: di
     instructions = f"""
     You are an assistant that {query_type_dict.get('mode', 'create')}s an email using a sample JSON format.
     Leave unspecified attributes unchanged. Ensure the subject and body are professional and informative.
+    The name at the bottom of the email should be the users name, which is {Users.query.filter_by(id=session['user_id']).first().name}.
     Current dateTime: {datetime.now()}
     email = {{
         "from": "{sender}",
@@ -1099,6 +1097,7 @@ def send_gmail_draft(service, draft_id):
         # return draft
     except Exception as e:
         print(f"An error occurred sending gmail draft: {e}")
+        emit('receiver', {'message': 'Error sending draft'})
 
 
 def delete_gmail_draft(service, draft_id):
@@ -1117,7 +1116,7 @@ def handle_approval_response(response):
     email_json = response.get('email')
 
     message = 'Draft was not saved, quitting'
-  
+
     if email_json and (status == 'save' or status == 'send'):
         email_raw = email_json_to_raw(email_json)
 
