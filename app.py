@@ -1112,7 +1112,7 @@ def format_system_instructions_for_gmail(query_type_dict: dict, content_dict: di
     instructions = f"""
     You are an assistant that {query_type_dict.get('mode', 'create')}s an email using a sample JSON format.
     Leave unspecified attributes unchanged. Ensure the subject and body are professional and informative.
-    The name at the bottom of the email should be the users name, which is {Users.query.filter_by(id=session['user_id']).first().name}.
+    The sender's name is {Users.query.filter_by(id=session['user_id']).first().name}. Use this name in the signature.
     Current dateTime: {datetime.now()}
     email = {{
         "from": "{sender}",
@@ -1159,12 +1159,12 @@ def send_gmail_draft(service, draft_id):
         # draft =
         service.users().drafts().send(
             userId='me', body={'id': draft_id}).execute()
-        emit('receiver', {'message': 'Draft sent successfully'})
+        socketio.emit('receiver', {'message': 'Email sent successfully'})
         print("Draft sent successfully")
         # return draft
     except Exception as e:
         print(f"An error occurred sending gmail draft: {e}")
-        emit('receiver', {'message': 'Error sending draft'})
+        socketio.emit('receiver', {'message': 'Error sending draft'})
 
 
 def delete_gmail_draft(service, draft_id):
@@ -1182,8 +1182,6 @@ def handle_approval_response(response):
     status = response.get('status')
     email_json = response.get('email')
 
-    message = 'Draft was not saved, quitting'
-
     if email_json and (status == 'save' or status == 'send'):
         email_raw = email_json_to_raw(email_json)
 
@@ -1193,7 +1191,6 @@ def handle_approval_response(response):
         draft_id = draft.get('id')
         if status == 'send':
             send_gmail_draft(g.email, draft_id)
-            message = "Gmail draft was set successfully"
             print("Gmail draft sent successfully")
 
         elif status == 'save':
