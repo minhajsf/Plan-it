@@ -190,6 +190,8 @@ const generalButtonHandler = function(status){
 
     const emailContainer = chatBox.lastElementChild;
 
+    console.log("email container" + emailContainer);
+
     if (!emailContainer.lastElementChild) return;
 
     const buttonContainer = emailContainer.lastElementChild;
@@ -213,11 +215,20 @@ const generalButtonHandler = function(status){
         const subjectDiv = emailContainer.children[1].lastElementChild;
         const bodyDiv = emailContainer.children[2].lastElementChild;
 
+
         if (toDiv && subjectDiv && bodyDiv) {
+            console.log("1");
             
             if (toDiv.tagName === 'INPUT' || toDiv.tagName === 'TEXTAREA') toDiv.setAttribute('readonly', true);
             if (subjectDiv.tagName === 'INPUT' || subjectDiv.tagName === 'TEXTAREA') subjectDiv.setAttribute('readonly', true);
             if (bodyDiv.tagName === 'INPUT' || bodyDiv.tagName === 'TEXTAREA') bodyDiv.setAttribute('readonly', true);
+
+            console.log("2");
+
+            console.log("to" + toDiv.value);
+            console.log("subject" + subjectDiv.value);
+            console.log("body" + bodyDiv.value);
+
 
             const response = {
                 'status': status,
@@ -229,6 +240,7 @@ const generalButtonHandler = function(status){
             };
             socket.emit('approval-request-response', response);
 
+            console.log(response)
             
         } else {
             console.error('Expected form elements not found.');
@@ -261,7 +273,7 @@ function createEmailDiv(fields) {
     toDiv.innerHTML = `
         <div class = "wrapper">
             <label for="to-field">To:</label>
-            <input type="text" id="to-field" name="to-field" placeholder: "To" value="${fields.to}">
+            <input type="text" id="to-field" name="to-field" placeholder: "To" value="${fields.to}" required>
         </div>
     `;
 

@@ -45,6 +45,7 @@ h1 {
 .nav-link {
     margin-left: 40px;
     margin-top: 25px;
+    font-size: 18px;
 }
 
 .form-control {

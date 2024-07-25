@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../static/img/planet-tab.png" type="image/png">
     <link rel="icon" href="../static/img/Asset%204.png" type="image/png">
     <title>Dashboard</title>
     <link rel="stylesheet" type="text/css" href="../static/css/dashboard.css">
@@ -108,7 +109,7 @@
                         <div class="card-title"><b>{{ email.subject}}</b></div>
                         <div class="card-details">To: {{ email.to }}</div>
                         <div class="card-details">Body: {{ email.body[:20] }}...</div>
-                        <div class="card-details"><a href="{{ email.link }}">View draft in Gmail</a></div>
+                        <div class="card-details"><a href="{{ email.link }}" target="_blank">View draft in Gmail</a></div>
 
                     </div>
                     {% endfor %}

@@ -17,24 +17,27 @@ body {
            
 }
 .alert {
-    width: 300px; /* Rectangle width */
-    height: 50px; /* Rectangle height */
-    margin: 10px auto; /* Center the alert and add some margin */
-    opacity: 0; /* Start with the alert invisible */
-    transform: translateX(100%); /* Start from the right */
-    animation: slideIn 0.5s forwards; /* Animation to slide in */
+    width: 300px; 
+    height: 50px; 
+    margin: 10px auto; 
+    opacity: 0; 
+    transform: translateX(100%); 
+    animation: slideIn 0.5s forwards; 
     
     
 }
 
 @keyframes slideIn {
     to {
-        transform: translateX(0); /* End at original position */
-        opacity: 1; /* Fully visible */
+        transform: translateX(0); 
+        opacity: 1; 
     }
 }
 .preformatted {
     white-space: pre-wrap; 
+}
+.navbar {
+    
 }
 .navbar, .navbar a{
     color: white;
@@ -47,6 +50,7 @@ body {
 .nav-link {
     margin-left: 40px;
     margin-top: 25px;
+    font-size: 18px;
 }
 #startButton, #stopButton { 
     margin: 15px 10px 5px 5px;

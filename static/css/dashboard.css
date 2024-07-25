@@ -33,6 +33,7 @@ h1, h2, .navbar a, p{
 .nav-link {
     margin-left: 40px;
     margin-top: 25px;
+    font-size: 18px;
 }
 .section-header {
     border-bottom: 1px solid white;
