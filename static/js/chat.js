@@ -367,15 +367,36 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // this code is for the settings "clear" button
-document.getElementById('clearBtn').addEventListener('click', function() {
+document.getElementById('clearBtn').addEventListener('click', async function() {
     document.getElementById('confirmationDialog').style.display = 'block';
 });
 
-document.getElementById('confirmYes').addEventListener('click', function() {
+document.getElementById('confirmYes').addEventListener('click', async function() {
     console.log('Confirmed');
     document.getElementById('confirmationDialog').style.display = 'none';
     
     document.getElementById('secondDialog').style.display = 'block';
+
+    try {
+        const response = await fetch('/clear-history', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+            console.log(result.message);
+            chatBox.innerHTML = '';
+        } else {
+            console.error('Failed to clear history:', result.error);
+        }
+    } catch (error) {
+        console.error('Error clearing history:', error);
+    }
+
+    document.getElementById('secondDialog').style.display = 'none';
 });
 
 document.getElementById('confirmNo').addEventListener('click', function() {

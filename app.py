@@ -147,6 +147,22 @@ def get_chat_history():
         return jsonify(serialized_history)
     else:
         return jsonify({"error": "User not authenticated"})
+    
+@app.route('/clear-history', methods=['POST'])
+def clear_history():
+    user_id = session.get('user_id')
+    if user_id:
+        try:
+            # Delete all records from History and ChatResponses tables
+            ChatResponse.query.filter_by(user_id=user_id).delete()
+            History.query.filter_by(user_id=user_id).delete()
+            db.session.commit()
+            return jsonify({"message": "History cleared successfully"})
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": str(e)})
+    else:
+        return jsonify({"error": "User not authenticated"})
 
 @app.route('/')
 @app.route('/home')
@@ -191,7 +207,7 @@ def create_history_entry(user_id, user_prompt):
 def add_chat_response_to_history(history_id, response):
     history_entry = History.query.get(history_id)
     if history_entry:
-        history_entry.add_chat_response(response)
+        history_entry.add_chat_response(history_entry.user_id, response)
         db.session.commit()
     else:
         print(f"No history entry found with id {history_id}")

@@ -197,13 +197,15 @@ class ChatResponse(db.Model):
 
     __tablename__ = "ChatResponses"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer)
     history_id = db.Column(db.Integer, db.ForeignKey('History.id'), nullable=False)
     response = db.Column(db.String, nullable=False)
 
-    def __init__(self, response):
+    def __init__(self, user_id, response):
         """
         Initializes ChatResponse object.
         """
+        self.user_id = user_id
         self.response = response
 
     def serialize(self):
@@ -245,9 +247,9 @@ class History(db.Model):
             "chat_responses": [response.serialize() for response in self.chat_responses],
         }
 
-    def add_chat_response(self, response):
+    def add_chat_response(self, user_id, response):
         """
         Adds a chat response to the history.
         """
-        self.chat_responses.append(ChatResponse(response=response))
+        self.chat_responses.append(ChatResponse(user_id = user_id, response=response))
 
