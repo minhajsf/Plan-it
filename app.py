@@ -39,7 +39,6 @@ socketio = SocketIO(app,
                     logger=True,
                     engineio_logger=True,
                     cors_allowed_origins="*",
-                    async_mode='eventlet'
                     )
 load_dotenv()
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
@@ -1204,6 +1203,7 @@ def handle_approval_response(response):
     gmail_setup()
     status = response.get('status')
     email_json = response.get('email')
+    print(email_json)
 
     if email_json and (status == 'save' or status == 'send'):
         email_raw = email_json_to_raw(email_json)

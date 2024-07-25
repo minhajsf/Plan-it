@@ -208,9 +208,9 @@ const generalButtonHandler = function(status){
 
     if (emailContainer.children.length >= 3) {
        
-        const toDiv = emailContainer.children[0].lastElementChild;
-        const subjectDiv = emailContainer.children[1].lastElementChild;
-        const bodyDiv = emailContainer.children[2].lastElementChild;
+        const toDiv = emailContainer.children[0].children[0].lastElementChild;
+        const subjectDiv = emailContainer.children[1].children[0].lastElementChild;
+        const bodyDiv = emailContainer.children[2].children[0];
 
         if (toDiv && subjectDiv && bodyDiv) {
             
@@ -226,6 +226,7 @@ const generalButtonHandler = function(status){
                     'body': bodyDiv.value
                 }
             };
+            console.log(response)
             socket.emit('approval-request-response', response);
 
             
@@ -260,7 +261,7 @@ function createEmailDiv(fields) {
     toDiv.innerHTML = `
         <div class = "wrapper">
             <label for="to-field">To:</label>
-            <input type="text" id="to-field" name="to-field" placeholder: "To" value="${fields.to}">
+            <input type="text" id="to-field" name="to-field" placeholder="To" value="${fields.to}">
         </div>
     `;
 
@@ -359,7 +360,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     socket.on('request-approval', (email_json) => {
         // clearEmailContainers(); // Clear existing email containers before adding a new one
-        console.log(email_json)
         createEmailDiv(email_json);
 });
 
