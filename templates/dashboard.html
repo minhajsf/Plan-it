@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../static/img/Asset%204.png" type="image/png">
     <title>Dashboard</title>
     <link rel="stylesheet" type="text/css" href="../static/css/dashboard.css">
     <script src="../static/js/flash.js"></script>
@@ -18,7 +19,7 @@
         {% endif %}
     {% endwith %}
     <nav class="navbar navbar-expand-lg ">
-        <h1>Plan-it</h1>
+        <img src = "../static/img/AssetNew.png">
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav mr-auto">
                 <li class="nav-item">
@@ -71,7 +72,7 @@
                         <div class="card-details date">Date: {{ event.start }}</div>
                         <div class="card-details">Description: {{ event.description }}</div>
                         <div class="card-details time">Time: {{ event.start }}</div>
-                        <div class="card-details">Link: <a href="{{ event.link }}" target="_blank">View event in Calendar</a></div>
+                        <div class="card-details"><a href="{{ event.link }}" target="_blank">View event in Calendar</a></div>
                     </div>
                     {% endfor %}
                 {% else %}
@@ -89,7 +90,7 @@
                         <div class="card-details date">Date: {{ meet.start }}</div>
                         <div class="card-details">Description: {{ meet.description }}</div>
                         <div class="card-details time">Time: {{ meet.start }}</div>
-                        <div class="card-details">Link: <a href="{{ meet.link }}" target="_blank">View meet in Calendar</a></div>
+                        <div class="card-details"><a href="{{ meet.link }}" target="_blank">View meet in Calendar</a></div>
                     </div>
                     {% endfor %}
                 {% else %}
@@ -107,7 +108,7 @@
                         <div class="card-title"><b>{{ email.subject}}</b></div>
                         <div class="card-details">To: {{ email.to }}</div>
                         <div class="card-details">Body: {{ email.body[:20] }}...</div>
-                        <div class="card-details">Link: <a href="{{ email.link }}">View draft in Gmail</a></div>
+                        <div class="card-details"><a href="{{ email.link }}">View draft in Gmail</a></div>
 
                     </div>
                     {% endfor %}

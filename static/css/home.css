@@ -127,7 +127,7 @@ h1, h2, p, .navbar a, footer {
 }
 .navbar img {
     width: 5%;
-    margin-top: -20px;
+    
 }
 .btn {
     pointer-events: auto;
@@ -149,7 +149,7 @@ h1, h2, p, .navbar a, footer {
     margin-left: 2px;
 }
 #intro-container p{
-    font-size: 25px;
+    font-size: 30px;
     color: white;
 }
 #second-title h1 {
@@ -170,12 +170,13 @@ h1, h2, p, .navbar a, footer {
     transform: translateY(-20%);
     pointer-events: auto;
     pointer-events: auto;
+    margin-top: 100px;
 }
 .color-container h2 {
     font-family: "Orbitron", sans-serif;
 }
 #arrow {
-    transform: translate(-25%, 450%);
+    transform: translate(-25%, 300%);
     min-width: 120%;
     height: 40%;
     margin-top: 100px;

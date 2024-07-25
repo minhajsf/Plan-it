@@ -19,14 +19,20 @@ h1, h2, .navbar a, p{
     color: white;
 }
 .card-details a {
-    color: black;
+    color: white;
     text-decoration: underline;
 }
 .navbar {
     margin-bottom: 20px;
 }
+.navbar img {
+    margin-top: -15px;
+    width: 10%;
+    height: 100px;
+}
 .nav-link {
-    margin-left: 30px;
+    margin-left: 40px;
+    margin-top: 25px;
 }
 .section-header {
     border-bottom: 1px solid white;
@@ -73,6 +79,24 @@ h1, h2, .navbar a, p{
     width: 80%;
     height: 60%;
     z-index: 10;
+    overflow-y: scroll;
+}
+.help::-webkit-scrollbar{
+    height: 1px;
+    width: 5px;
+}
+
+.help::-webkit-scrollbar-track{
+    background: transparent;
+}
+
+.help::-webkit-scrollbar-thumb{
+    background: rgba(0, 0, 0, 0.616);
+    border-radius: 6px;
+}
+
+.help::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.514);
 }
 #help hr {
     border: 1px solid #000000;
@@ -172,13 +196,14 @@ h1, h2, .navbar a, p{
     border-radius: 15px !important;
     width: 250px !important;
     height: 200px !important;
-    background-color: rgba(255, 255, 255, 0.61) !important;
+    background-color: rgba(199, 225, 255, 0.253) !important;
     box-shadow: 0 0 10px 5px rgba(0, 0, 0, 0.5) !important;
     margin-right: 20px !important;
     transition: transform 0.2s !important;
     overflow-y: scroll !important;
+    color: white;
 }
-.card::-webkit-scrollbar{
+.card::-webkit-scrollbar {
     height: 1px;
     width: 5px;
 }
