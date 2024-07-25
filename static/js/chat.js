@@ -173,7 +173,6 @@ function appendMessage(message, sender) {
     messageElement.innerHTML = formatMessage(message);
     chatBox.appendChild(messageElement);
     chatBox.scrollTop = chatBox.scrollHeight;
-    chatHistory(); 
 }
 
 
@@ -306,11 +305,17 @@ function createEmailDiv(fields) {
 
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     
-    const chatHistory = localStorage.getItem('chatHistory');
-    if (chatHistory) {
-        chatBox.innerHTML = chatHistory;
+    const response = await fetch('/chat-history');
+    if (response.ok) {
+        const chatHistory = await response.json();
+        chatHistory.reverse().forEach(entry => {
+            appendMessage(entry.user_prompt, 'user');
+            entry.chat_responses.forEach(response => {
+                appendMessage(response.response, 'server');
+            });
+        });
     }
     
     startButton.style.display = 'inline-block';

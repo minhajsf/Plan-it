@@ -16,8 +16,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 import openai
 from email.message import EmailMessage
-from db import db, Users, Events, Meets, Emails
-
+from db import db, Users, Events, Meets, Emails, History, ChatResponse
 import logging
 
 # Google Imports
@@ -131,6 +130,16 @@ def logout():
 
 #     return decorated_function
 
+@app.route('/chat-history', methods=['GET'])
+@login_required
+def get_chat_history():
+    user_id = session.get('user_id')
+    if user_id:
+        history = History.query.filter_by(user_id=user_id).order_by(History.id.desc()).limit(20).all()
+        serialized_history = [h.serialize() for h in history]
+        return jsonify(serialized_history)
+    else:
+        return jsonify({"error": "User not authenticated"})
 
 @app.route('/')
 @app.route('/home')
@@ -163,6 +172,22 @@ def dashboard():
 def voice():
     return render_template('voice.html', title='Record')
 
+
+#history stuff dont change:
+def create_history_entry(user_id, user_prompt):
+    history_entry = History(user_id=user_id, user_prompt=user_prompt)
+    db.session.add(history_entry)
+    db.session.commit()
+    session['history_id'] = history_entry.id
+    return history_entry.id
+
+def add_chat_response_to_history(history_id, response):
+    history_entry = History.query.get(history_id)
+    if history_entry:
+        history_entry.add_chat_response(response)
+        db.session.commit()
+    else:
+        print(f"No history entry found with id {history_id}")
 
 @socketio.on('connect')
 def handle_new_connection():
@@ -384,11 +409,14 @@ def handle_user_prompt(prompt):
     app.logger.debug('Handle user prompt accessed')
     # add in prompt to dictionary directly
     # saves time on the gpt call in determine_query_type
+    create_history_entry(session['user_id'], prompt)
     prompt_dictionary = determine_query_type(prompt)
 
     print(prompt_dictionary)
 
     if prompt_dictionary == {"event_type": "unknown", "mode": "unknown"}:
+        add_chat_response_to_history(session['history_id'], f'''To use Plan-it, specify a service, action, and the corresponding details. 
+                                    Ex: I want to create an appointment in my calendar for tomorrow at 9am. ''')
         socketio.emit('receiver',
                       {'message': 'To use Plan-it, specify a service, action, and the corresponding details. '
                                   'Ex: I want to create an appointment in my calendar for tomorrow at 9am. '})
@@ -422,6 +450,7 @@ def handle_user_prompt(prompt):
             user_event = "Gmail draft"
 
 
+        add_chat_response_to_history(session['history_id'], f"Sure thing! {user_mode}ing your {user_event}...")
         socketio.emit('receiver', {'message': f"Sure thing! Activating {mode} mode to process your {user_event} at light speed..."})
 
         success_message = eval(f"{event_type}_{mode}()")
@@ -433,6 +462,7 @@ def handle_user_prompt(prompt):
               GMeet -> (Create, Update, or Remove), or Gmail -> (Create, Send, and Delete)"""
         print("Exception thrown in handle_user_prompt at bottom try-catch",
               file=sys.stderr)
+        add_chat_response_to_history(session['history_id'], failure_message)
         socketio.emit('receiver', {'message': failure_message})
         print(f"Error: {e}", file=sys.stderr)
         return failure_message
@@ -522,6 +552,7 @@ def gcal_create():
 
     if hasattr(format_instruction, 'error'):
         print("Not enough info. Please try again")
+        add_chat_response_to_history(session['history_id'], 'Not enough information. Please try again')
         socketio.emit('receiver', {'message': 'Not enough information. Please try again'})
         return
 
@@ -547,6 +578,7 @@ def gcal_create():
     except Exception as e:
         db_failure_message = f"Error creating event in db. Try again?"
         print(db_failure_message, file=sys.stderr)
+        add_chat_response_to_history(session['history_id'], db_failure_message)
         socketio.emit('receiver', {'message': db_failure_message})
 
     event_description = f"""Event Created! Check your Google Calendar to confirm!\n
@@ -556,6 +588,7 @@ def gcal_create():
     Start Time: {new_event.start}
     End Time: {new_event.end}
     """
+    add_chat_response_to_history(session['history_id'], event_description)
     socketio.emit('receiver', {'message': event_description})
     print("event created!")
 
@@ -572,6 +605,7 @@ def gcal_update():
     events = Events.query.filter_by(user_id=user_id).all()
     if not events:
         print("Events not found in db. Try again?")
+        add_chat_response_to_history(session['history_id'], 'Events not found in db. Try again?')
         socketio.emit(
             'receiver', {'message': 'Events not found in db. Try again?'})
         return
@@ -583,12 +617,14 @@ def gcal_update():
 
     if not filtered_events:
         print("No events found matching the provided keywords.", file=sys.stderr)
+        add_chat_response_to_history(session['history_id'], 'No matching events found.')
         socketio.emit('receiver', {'message': 'No matching events found.'})
         return "No matching events found."
 
     event_id = find_event_id(user_prompt, filtered_events)
     if event_id == 'invalid':
         print("Not enough information, please try again?")
+        add_chat_response_to_history(session['history_id'],'Not enough information, please try again?')
         socketio.emit(
             'receiver', {'message': 'Not enough information, please try again?'})
         return
@@ -602,6 +638,7 @@ def gcal_update():
     # if not found in db
     if not event:
         print("Event not found in db. Try again?")
+        add_chat_response_to_history(session['history_id'],'Event not found in db. Try again?')
         socketio.emit(
             'receiver', {'message': 'Event not found in db. Try again?'})
         return
@@ -634,6 +671,7 @@ def gcal_update():
     except Exception as e:
         db_failure_message = f"Error updating event in db. Try again?"
         print(db_failure_message, file=sys.stderr)
+        add_chat_response_to_history(session['history_id'], db_failure_message)
         socketio.emit('receiver', {'message': db_failure_message})
 
     event_description = f"""Event Updated! Check your Google Calendar to confirm!\n
@@ -644,6 +682,7 @@ def gcal_update():
     End Time: {event.end}
     """
     print("Event has been updated successfully.")
+    add_chat_response_to_history(session['history_id'], event_description)
     socketio.emit('receiver', {'message': event_description})
 
 
@@ -658,6 +697,7 @@ def gcal_remove():
     events = Events.query.filter_by(user_id=user_id).all()
     if not events:
         print("Events not found in db. Try again?")
+        add_chat_response_to_history(session['history_id'],'Events not found in db. Try again?')
         socketio.emit(
             'receiver', {'message': 'Events not found in db. Try again?'})
         return
@@ -669,12 +709,14 @@ def gcal_remove():
 
     if not filtered_events:
         print("No events found matching the provided keywords.", file=sys.stderr)
+        add_chat_response_to_history(session['history_id'], 'No matching events found.')
         socketio.emit('receiver', {'message': 'No matching events found.'})
         return "No matching events found."
 
     event_id = find_event_id(user_prompt, filtered_events)
     if event_id == 'invalid':
         print("Not enough information, please try again?")
+        add_chat_response_to_history(session['history_id'],'Not enough information, please try again?')
         socketio.emit(
             'receiver', {'message': 'Not enough information, please try again?'})
         return
@@ -702,9 +744,11 @@ def gcal_remove():
     except Exception as e:
         db_failure_message = f"Error deleting event in db. Try again?"
         print(db_failure_message, file=sys.stderr)
+        add_chat_response_to_history(session['history_id'], db_failure_message)
         socketio.emit('receiver', {'message': db_failure_message})
 
     print("Event has been deleted successfully.")
+    add_chat_response_to_history(session['history_id'], event_description)
     socketio.emit('receiver', {'message': event_description})
 
     return event_description
@@ -814,6 +858,7 @@ def gmeet_create():
     print(event_data)
     if event_data.get('error'):
         print("Not enough information, Please try again")
+        add_chat_response_to_history(session['history_id'],'Not enough information, Please try again')
         socketio.emit(
             'receiver', {'message': 'Not enough information, Please try again'})
         return
@@ -841,6 +886,7 @@ def gmeet_create():
     except Exception as e:
         db_failure_message = f"Error creating meeting in db. Try again?"
         print(db_failure_message, file=sys.stderr)
+        add_chat_response_to_history(session['history_id'], db_failure_message)
         socketio.emit('receiver', {'message': db_failure_message})
 
     event_description = f"""Meeting created!\n
@@ -851,7 +897,7 @@ def gmeet_create():
     End Time: {new_meeting.end}
     """
     print("Meeting has been created successfully.")
-
+    add_chat_response_to_history(session['history_id'], event_description)
     socketio.emit('receiver', {'message': event_description})
 
 
@@ -867,6 +913,7 @@ def gmeet_update():
     meetings = Meets.query.filter_by(user_id=user_id).all()
     if not meetings:
         print("Meetings not found in db. Try again?")
+        add_chat_response_to_history(session['history_id'], 'Meetings not found in db. Try again?')
         socketio.emit(
             'receiver', {'message': 'Meetings not found in db. Try again?'})
         return
@@ -879,6 +926,7 @@ def gmeet_update():
 
     if not filtered_meetings:
         print("No meetings found matching the provided keywords.", file=sys.stderr)
+        add_chat_response_to_history(session['history_id'], 'No meetings found matching the provided keywords.')
         socketio.emit(
             'receiver', {'message': 'No meetings found matching the provided keywords.'})
         return "No matching meeting found."
@@ -886,6 +934,7 @@ def gmeet_update():
     mid = find_meeting_id(user_prompt, filtered_meetings)
     if mid == 'invalid':
         print("Not enough information, please try again?")
+        add_chat_response_to_history(session['history_id'],'Not enough information, please try again?')
         socketio.emit('receiver', {'message': 'Not enough information, please try again?'})
         return
     # query event from database
@@ -895,6 +944,7 @@ def gmeet_update():
     # if not found in db
     if not meeting:
         print("Meeting not found in db. Try again?")
+        add_chat_response_to_history(session['history_id'], 'Meeting not found in db. Try again?')
         socketio.emit(
             'receiver', {'message': 'Meeting not found in db. Try again?'})
         return
@@ -931,6 +981,7 @@ def gmeet_update():
     except Exception as e:
         db_failure_message = f"Error updating meeting in db. Try again?"
         print(db_failure_message, file=sys.stderr)
+        add_chat_response_to_history(session['history_id'], db_failure_message)
         socketio.emit('receiver', {'message': db_failure_message})
 
     event_description = f"""Meeting updated!\n
@@ -943,6 +994,7 @@ def gmeet_update():
 
     print("Meeting updated successfully.")
 
+    add_chat_response_to_history(session['history_id'], event_description)
     socketio.emit('receiver', {'message': event_description})
 
 
@@ -957,6 +1009,7 @@ def gmeet_remove():
     meetings = Meets.query.filter_by(user_id=user_id).all()
     if not meetings:
         print("Meetings not found in db. Try again?")
+        add_chat_response_to_history(session['history_id'], 'Meetings not found in db. Try again?')
         socketio.emit(
             'receiver', {'message': 'Meetings not found in db. Try again?'})
         return
@@ -969,6 +1022,7 @@ def gmeet_remove():
 
     if not filtered_meetings:
         print("No meetings found matching the provided keywords.", file=sys.stderr)
+        add_chat_response_to_history(session['history_id'],'No meetings found matching the provided keywords.')
         socketio.emit(
             'receiver', {'message': 'No meetings found matching the provided keywords.'})
         return "No matching meeting found."
@@ -976,6 +1030,7 @@ def gmeet_remove():
     meet_id = find_meeting_id(user_prompt, filtered_meetings)
     if meet_id == 'invalid':
         print("Not enough information, please try again?")
+        add_chat_response_to_history(session['history_id'],'Not enough information, please try again?')
         socketio.emit(
             'receiver', {'message': 'Not enough information, please try again?'})
         return
@@ -995,6 +1050,7 @@ def gmeet_remove():
     except Exception as e:
         db_failure_message = f"Error deleting meeting in db. Try again"
         print(db_failure_message, file=sys.stderr)
+        add_chat_response_to_history(session['history_id'], db_failure_message)
         socketio.emit('receiver', {'message': db_failure_message})
 
     event_description = f"""Meeting removed!\n
@@ -1005,6 +1061,7 @@ def gmeet_remove():
     End Time: {meeting_to_remove.end}
     """
     print("Meeting removed successfully.")
+    add_chat_response_to_history(session['history_id'], event_description)
     socketio.emit('receiver', {'message': event_description})
 
 
@@ -1152,9 +1209,10 @@ def handle_approval_response(response):
             )
             db.session.add(newly_drafted_email)
             db.session.commit()
-            emit('receiver', {'message': "Gmail draft was saved successfully"})
-    else:
-        emit('receiver', {'message': "Gmail draft was not saved"})
+            message = "Gmail draft was saved successfully"
+    add_chat_response_to_history(session['history_id'], message)
+    socketio.emit('receiver', {'message': message})
+
     # technically there is a 'quit' but it's not anywhere, so we just ignore the data
 
 
@@ -1223,6 +1281,7 @@ def gmail_send():
         except Exception as e:
             db_failure_message = f"Error removing draft from db. Try again?"
             print(db_failure_message, file=sys.stderr)
+            add_chat_response_to_history(session['history_id'], db_failure_message)
             socketio.emit('receiver', {'message': db_failure_message})
 
 
@@ -1273,6 +1332,7 @@ def gmail_delete():
         except Exception as e:
             db_failure_message = f"Error deleting draft in db. Try again?"
             print(db_failure_message, file=sys.stderr)
+            add_chat_response_to_history(session['history_id'], db_failure_message)
             socketio.emit('receiver', {'message': db_failure_message})
 
 
