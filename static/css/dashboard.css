@@ -6,13 +6,21 @@ html, body {
 }
 
 body {
-    background-image: radial-gradient(circle at 16% 83%, rgba(148, 148, 148,0.06) 0%, rgba(148, 148, 148,0.06) 50%,rgba(63, 63, 63,0.06) 50%, rgba(63, 63, 63,0.06) 100%),
-    radial-gradient(circle at 68% 87%, rgba(66, 66, 66,0.06) 0%, rgba(66, 66, 66,0.06) 50%,rgba(105, 105, 105,0.06) 50%, rgba(105, 105, 105,0.06) 100%),
-    radial-gradient(circle at 38% 50%, rgba(123, 123, 123,0.06) 0%, rgba(123, 123, 123,0.06) 50%,rgba(172, 172, 172,0.06) 50%, rgba(172, 172, 172,0.06) 100%),
-    linear-gradient(90deg, hsl(18,0%,1%),hsl(18,0%,1%));
+    background-image: url(../img/steal-purple.png);
+    background-attachment: fixed;
+    background-size: cover;
+    height: 100%;
+    width: 100%;
+    position: relative;
+    top: 0;
+    left: 0; 
 }
-h1, h2, .navbar a {
+h1, h2, .navbar a, p{
     color: white;
+}
+.card-details a {
+    color: black;
+    text-decoration: underline;
 }
 .navbar {
     margin-bottom: 20px;
@@ -63,7 +71,7 @@ h1, h2, .navbar a {
     background: rgba(51, 51, 51, 0.9);
     backdrop-filter: blur(10px);
     width: 80%;
-    height: 100%;
+    height: 60%;
     z-index: 10;
 }
 #help hr {
@@ -91,7 +99,8 @@ h1, h2, .navbar a {
 }
 .help-body {
     padding: 10px 15px;
-    color: #1c1d1d; 
+    color: #1c1d1d;
+    margin-top: 20px;
 }
 #overlay {
     position: fixed;
@@ -109,17 +118,24 @@ h1, h2, .navbar a {
     opacity: 1;
 }
 .popup-header {
+    background-color: #000000;
+    color: white;
     padding: 20px;
     text-align: center;
     font-size: 24px;
+    position: absolute;
     width: 100%; 
     top: 0; left: 0; right: 0;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
     display: flex;
+    align-items: center;
     justify-content: space-between;
-    position: relative;
 }
 .popup-body {
     text-align: left;
+    margin-top: 10%;
+    margin-left: 10px;
 }
 .container {
     position: absolute; 
@@ -152,30 +168,46 @@ h1, h2, .navbar a {
     gap: 20px;
 }
 .card {
-    flex: 0 0 auto;
-    border: 1px solid #dee2e6;
-    border-radius: 5px;
-    width: 250px;
-    background: #fff;
-    box-shadow: 0 0 10px 5px rgba(0, 0, 0, 0.5);
-    margin-right: 20px;
-    transition: transform 0.2s;
+    flex: 0 0 auto !important;
+    border-radius: 15px !important;
+    width: 250px !important;
+    height: 200px !important;
+    background-color: rgba(255, 255, 255, 0.61) !important;
+    box-shadow: 0 0 10px 5px rgba(0, 0, 0, 0.5) !important;
+    margin-right: 20px !important;
+    transition: transform 0.2s !important;
+    overflow-y: scroll !important;
+}
+.card::-webkit-scrollbar{
+    height: 1px;
+    width: 5px;
+}
+
+.card::-webkit-scrollbar-track{
+    background: transparent;
+}
+
+.card::-webkit-scrollbar-thumb{
+    background: rgba(0, 0, 0, 0.616);
+    border-radius: 6px;
+}
+
+.card::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.514);
 }
 .card:hover {
     transform: scale(1.05);
-}
-.card img {
-    width: 100%;
-    border-bottom: 1px solid #dee2e6;
 }
 .card-title {
     padding: 10px;
     font-size: 1.1em;
     font-weight: bold;
+    
 }
 .card-details {
     padding: 0 10px;
-    font-size: 0.9em;
+    font-size: 1em;
+   
 }
 .card-container::-webkit-scrollbar{
     height: 5px;

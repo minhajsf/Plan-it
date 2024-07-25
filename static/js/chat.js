@@ -129,7 +129,7 @@ function sendPrompt() {
         stopButton.click(); 
     }
 
-    // After ensuring mic is off, proceed to send the message
+    
     const prompt = promptInput.value.trim();
     if (prompt !== '') {
         socket.emit('user_prompt', prompt);
@@ -140,13 +140,12 @@ function sendPrompt() {
 
 promptInput.addEventListener('keypress', (event) => {
     if (event.key === 'Enter') {
-        event.preventDefault(); // Prevent default Enter key behavior (e.g., newline in text area)
+        event.preventDefault(); 
         sendPrompt();
     }
 });
 
 function formatMessage(message) {
-    // Convert ISO 8601 date-time strings to a more readable format
     message = message.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}([+-]\d{2}:\d{2})?/g, function (match) {
        
         const date = new Date(match);
@@ -186,35 +185,36 @@ function chatHistory() {
 }
 
 const generalButtonHandler = function(status){
-    // Ensure chatBox has children
+   
     if (!chatBox.lastElementChild) return;
 
     const emailContainer = chatBox.lastElementChild;
 
-    // Ensure emailContainer has children
     if (!emailContainer.lastElementChild) return;
 
     const buttonContainer = emailContainer.lastElementChild;
-
-    // Check that buttonContainer has the expected buttons
+    
     if (buttonContainer.children.length >= 3) {
         buttonContainer.children[0].removeEventListener('click', quitButtonHandler);
         buttonContainer.children[1].removeEventListener('click', saveButtonHandler);
         buttonContainer.children[2].removeEventListener('click', sendButtonHandler);
+
+        buttonContainer.children[0].classList.add('disabled-button');
+        buttonContainer.children[1].classList.add('disabled-button');
+        buttonContainer.children[2].classList.add('disabled-button');
     } else {
         console.error('Button container does not have the expected buttons.');
         return;
     }
 
-    // Ensure emailContainer has the expected children
     if (emailContainer.children.length >= 3) {
-        // gets the input/textarea element from the most recent email container
+       
         const toDiv = emailContainer.children[0].lastElementChild;
         const subjectDiv = emailContainer.children[1].lastElementChild;
         const bodyDiv = emailContainer.children[2].lastElementChild;
 
         if (toDiv && subjectDiv && bodyDiv) {
-            // Ensure elements are form elements
+            
             if (toDiv.tagName === 'INPUT' || toDiv.tagName === 'TEXTAREA') toDiv.setAttribute('readonly', true);
             if (subjectDiv.tagName === 'INPUT' || subjectDiv.tagName === 'TEXTAREA') subjectDiv.setAttribute('readonly', true);
             if (bodyDiv.tagName === 'INPUT' || bodyDiv.tagName === 'TEXTAREA') bodyDiv.setAttribute('readonly', true);
@@ -229,7 +229,7 @@ const generalButtonHandler = function(status){
             };
             socket.emit('approval-request-response', response);
 
-            // Handle the response object (e.g., send it somewhere or use it)
+            
         } else {
             console.error('Expected form elements not found.');
         }
@@ -275,9 +275,8 @@ function createEmailDiv(fields) {
     const bodyDiv = document.createElement('div');
     bodyDiv.className = 'body-input-field';
     bodyDiv.innerHTML = `
-        <label for="body-field">Body:</label>
 
-        <textarea id="body-field" name="body-field"> ${fields.body} </textarea>
+        <textarea id="body-field" name="body-field" placeholder="Type your body...">  ${fields.body} </textarea>
 
     `;
 
