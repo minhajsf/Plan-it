@@ -6,6 +6,7 @@
     <title>Dashboard</title>
     <link rel="stylesheet" type="text/css" href="../static/css/dashboard.css">
     <script src="../static/js/flash.js"></script>
+    <script src="../static/js/dashboard.js" defer></script>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
 <body>
@@ -36,115 +37,85 @@
     </nav>
     <div class="container">
         <div class = "header">
-            <h1>Dashboard</h1>
+            <h1><b>Dashboard</b></h1>
             <div class="icons">
                 <button data-setting-target="#help" class="icon-button">
                     <img src="{{url_for('static', filename='img/Help circle.png')}}" alt="Help" class="icon">
                 </button>
                 <div class="popup help" id="help">
-                    <div class="popup-header">Help
+                    <div class="popup-header">
+                        <span><h2><b>Help</b></h2></span>
                         <button data-close-button class="close-button">&times;</button>
                     </div>
-                    <hr>
                     <div class="popup-body">
-                        <p>need help? skill issue</p>
+                        <h3><b>Upcoming Events</b></h3>
+                        <p>Displays your upcoming events with detailed information including the event title, date, description, time, and a link to view the event in your calendar.</p>
+                        <hr>
+                        <h3><b>Upcoming Meetings</b></h3>
+                        <p>Lists your scheduled meetings, providing details such as the meeting summary, date, description, time, and a link to view the meeting in your calendar.</p>
+                        <hr>
+                        <h3><b>Saved Drafts</b></h3>
+                        <p>Shows your saved email drafts, including the subject, recipient, a preview of the email body, and a link to view the draft in Gmail.</p>
                     </div>
                 </div>
             </div>
         </div>
         <div id="overlay"></div>
         <div class="section" id = "events-section">
-            <div class = "section-header"><h2>Upcoming Events</h2></div>
+            <div class = "section-header"><h2><b>Upcoming Events</b></h2></div>
             <div class="card-container">
                 {% if events %}
                     {% for event in events %}
                     <div class="card">
-                        <div class="card-title">{{ event.title }}</div>
-                        <div class="card-details">Date: {{ event.start }}</div>
+                        <div class="card-title"><b>{{ event.title }}</b></div>
+                        <div class="card-details date">Date: {{ event.start }}</div>
                         <div class="card-details">Description: {{ event.description }}</div>
-                        <div class="card-details">Time: {{ event.start }}</div>
-                        <div class="card-details">Link: <a href="{{ event.link }}" target="_blank">View event in Google Calendar</a></div>
+                        <div class="card-details time">Time: {{ event.start }}</div>
+                        <div class="card-details">Link: <a href="{{ event.link }}" target="_blank">View event in Calendar</a></div>
                     </div>
                     {% endfor %}
                 {% else %}
-                    <p>No upcoming events</p>
+                    <p>No upcoming events at the moment...</p>
                 {% endif %}
             </div>
         </div>
         <div class="section" id = "meetings-section">
-            <div class = "section-header"><h2>Upcoming Meetings</h2></div>
+            <div class = "section-header"><h2><b>Upcoming Meetings</b></h2></div>
             <div class="card-container">
                 {% if meets %}
                     {% for meet in meets %}
                     <div class="card">
                         <div class="card-title">{{ meet.summary }}</div>
-                        <div class="card-details">Date: {{ meet.start }}</div>
+                        <div class="card-details date">Date: {{ meet.start }}</div>
                         <div class="card-details">Description: {{ meet.description }}</div>
-                        <div class="card-details">Time: {{ meet.start }}</div>
-                        <div class="card-details">Link: <a href="{{ meet.link }}" target="_blank">View meet in Google Calendar</a></div>
+                        <div class="card-details time">Time: {{ meet.start }}</div>
+                        <div class="card-details">Link: <a href="{{ meet.link }}" target="_blank">View meet in Calendar</a></div>
                     </div>
                     {% endfor %}
                 {% else %}
-                    <p>No upcoming meetings</p>
+                    <p>No upcoming meetings at the moment...</p>
                 {% endif %}
             </div>
         </div>
         <div class="section" id = "saved-section">
-            <div class = "section-header"><h2>Saved Drafts</h2></div>
+            <div class = "section-header"><h2><b>Saved Drafts</b></h2></div>
             <div class="card-container">
                 {% if emails %}
                     {% for email in emails %}
                     <div class="card">
-                        <div class="card-title">{{ email.subject }}</div>
+
+                        <div class="card-title"><b>{{ email.subject}}</b></div>
                         <div class="card-details">To: {{ email.to }}</div>
                         <div class="card-details">Body: {{ email.body[:20] }}...</div>
-                        <div class="card-details">Link: <a href="{{ email.link }}">View draft in GMail</a></div>
+                        <div class="card-details">Link: <a href="{{ email.link }}">View draft in Gmail</a></div>
+
                     </div>
                     {% endfor %}
                 {% else %}
-                    <p>No saved drafts</p>
+                    <p>No saved drafts at the moment...</p>
                 {% endif %}
             </div>
         </div>
     </div>
 </body>
-<script>
-    const openButtons = document.querySelectorAll("[data-setting-target]");
-    const closeButtons = document.querySelectorAll("[data-close-button]");
-    const overlay = document.getElementById("overlay");
-
-    document.addEventListener('DOMContentLoaded', () => {;
-    openButtons.forEach(button => {
-        button.addEventListener("click", () => {
-            const modal = document.querySelector(button.dataset.settingTarget);
-            openModal(modal);
-        });
-    });
-
-    closeButtons.forEach(button => {
-        button.addEventListener("click", () => {
-            const modal = button.closest(".popup");
-            closeModal(modal);
-        });
-    });
-
-    overlay.addEventListener("click", () => {
-        const modals = document.querySelectorAll(".popup.active");
-        modals.forEach(modal => closeModal(modal));
-    });
-
-    function openModal(modal) {
-        if (modal == null) return;
-        modal.classList.add("active");
-        overlay.classList.add("active");
-    }
-
-    function closeModal(modal) {
-        if (modal == null) return;
-        modal.classList.remove("active");
-        overlay.classList.remove("active");
-    }
-
-});
-</script>
 </html>

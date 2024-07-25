@@ -15,6 +15,7 @@ import socketio
 from dotenv import load_dotenv
 from openai import OpenAI
 import openai
+from email.message import EmailMessage
 from db import db, Users, Events, Meets, Emails, History, ChatResponse
 import logging
 
@@ -285,7 +286,8 @@ def determine_query_type(message: str):
                  "content": """You are an assistant that determines if a message is related to either Google Calendar,
                              Google Meet, or Gmail. Return a json response as {'event_type': , 
                              'mode': } where type is gcal, gmeet, or gmail. If the type is gcal or gmeet, the mode
-                             can be create, update, or remove. For email, the mode can be create, remove or send.
+                             can be create, update, or remove. For email, the mode can be create or send. For email, 
+                             If the user is asking to "write" or "create" an email, the mode is create, not send.
                              If you are not sure, return <{"event_type": "unknown", "mode": "unknown"}> without <>
                              exactly.
                              """},
@@ -447,8 +449,9 @@ def handle_user_prompt(prompt):
         else:
             user_event = "Gmail draft"
 
+
         add_chat_response_to_history(session['history_id'], f"Sure thing! {user_mode}ing your {user_event}...")
-        socketio.emit('receiver', {'message': f"Sure thing! {user_mode}ing your {user_event}..."})
+        socketio.emit('receiver', {'message': f"Sure thing! Activating {mode} mode to process your {user_event} at light speed..."})
 
         success_message = eval(f"{event_type}_{mode}()")
 
@@ -456,7 +459,7 @@ def handle_user_prompt(prompt):
 
     except Exception as e:
         failure_message = """Please try again. The program only works for GCal -> (Create, Update, and Remove),
-              GMeet -> (Create, Update, or Remove), or Gmail -> (Create, Update, Send, and Delete)"""
+              GMeet -> (Create, Update, or Remove), or Gmail -> (Create, Send, and Delete)"""
         print("Exception thrown in handle_user_prompt at bottom try-catch",
               file=sys.stderr)
         add_chat_response_to_history(session['history_id'], failure_message)
@@ -573,7 +576,7 @@ def gcal_create():
         db.session.add(new_event)
         db.session.commit()
     except Exception as e:
-        db_failure_message = f"Error creating event in db. {e}"
+        db_failure_message = f"Error creating event in db. Try again?"
         print(db_failure_message, file=sys.stderr)
         add_chat_response_to_history(session['history_id'], db_failure_message)
         socketio.emit('receiver', {'message': db_failure_message})
@@ -666,7 +669,7 @@ def gcal_update():
 
         db.session.commit()
     except Exception as e:
-        db_failure_message = f"Error updating event in db. {e}"
+        db_failure_message = f"Error updating event in db. Try again?"
         print(db_failure_message, file=sys.stderr)
         add_chat_response_to_history(session['history_id'], db_failure_message)
         socketio.emit('receiver', {'message': db_failure_message})
@@ -739,7 +742,7 @@ def gcal_remove():
         db.session.delete(event)
         db.session.commit()
     except Exception as e:
-        db_failure_message = f"Error deleting event in db. {e}"
+        db_failure_message = f"Error deleting event in db. Try again?"
         print(db_failure_message, file=sys.stderr)
         add_chat_response_to_history(session['history_id'], db_failure_message)
         socketio.emit('receiver', {'message': db_failure_message})
@@ -881,7 +884,7 @@ def gmeet_create():
         db.session.add(new_meeting)
         db.session.commit()
     except Exception as e:
-        db_failure_message = f"Error creating meeting in db. {e}"
+        db_failure_message = f"Error creating meeting in db. Try again?"
         print(db_failure_message, file=sys.stderr)
         add_chat_response_to_history(session['history_id'], db_failure_message)
         socketio.emit('receiver', {'message': db_failure_message})
@@ -976,7 +979,7 @@ def gmeet_update():
 
         db.session.commit()
     except Exception as e:
-        db_failure_message = f"Error updating meeting in db. {e}"
+        db_failure_message = f"Error updating meeting in db. Try again?"
         print(db_failure_message, file=sys.stderr)
         add_chat_response_to_history(session['history_id'], db_failure_message)
         socketio.emit('receiver', {'message': db_failure_message})
@@ -1045,7 +1048,7 @@ def gmeet_remove():
         db.session.delete(meeting_to_remove)
         db.session.commit()
     except Exception as e:
-        db_failure_message = f"Error deleting meeting in db. {e}"
+        db_failure_message = f"Error deleting meeting in db. Try again"
         print(db_failure_message, file=sys.stderr)
         add_chat_response_to_history(session['history_id'], db_failure_message)
         socketio.emit('receiver', {'message': db_failure_message})
@@ -1081,16 +1084,19 @@ def get_authenticated_user_email(service):
 def email_json_to_raw(email_json):
     from_field = get_authenticated_user_email(g.email)  # Assuming `from_list` has a single email
     to_field = email_json['to']
-    cc_field = ', '.join(email_json.get('cc')) if email_json.get('cc') else ''
+    cc_field = email_json.get('cc', [])
 
-    raw_email = f"""From: {from_field}
-To: {to_field}
-Cc: {cc_field}
-Subject: {email_json['subject']}
-Content-Type: text/plain; charset="UTF-8"
+    # Create EmailMessage object
+    message = EmailMessage()
+    message['From'] = from_field
+    message['To'] = to_field
+    message['Cc'] = ', '.join(cc_field) if cc_field else ''
+    message['Subject'] = email_json['subject']
+    message.set_content(email_json['body'], subtype='plain', charset='utf-8')
 
-{email_json['body']}
-"""
+    # Convert message to raw string
+    raw_email = message.as_string()
+
     return raw_email
 
 
@@ -1106,6 +1112,7 @@ def format_system_instructions_for_gmail(query_type_dict: dict, content_dict: di
     instructions = f"""
     You are an assistant that {query_type_dict.get('mode', 'create')}s an email using a sample JSON format.
     Leave unspecified attributes unchanged. Ensure the subject and body are professional and informative.
+    The name at the bottom of the email should be the users name, which is {Users.query.filter_by(id=session['user_id']).first().name}.
     Current dateTime: {datetime.now()}
     email = {{
         "from": "{sender}",
@@ -1152,10 +1159,12 @@ def send_gmail_draft(service, draft_id):
         # draft =
         service.users().drafts().send(
             userId='me', body={'id': draft_id}).execute()
+        emit('receiver', {'message': 'Draft sent successfully'})
         print("Draft sent successfully")
         # return draft
     except Exception as e:
         print(f"An error occurred sending gmail draft: {e}")
+        emit('receiver', {'message': 'Error sending draft'})
 
 
 def delete_gmail_draft(service, draft_id):
@@ -1172,7 +1181,9 @@ def handle_approval_response(response):
     gmail_setup()
     status = response.get('status')
     email_json = response.get('email')
-    message = 'Draft was not saved'
+
+    message = 'Draft was not saved, quitting'
+
     if email_json and (status == 'save' or status == 'send'):
         email_raw = email_json_to_raw(email_json)
 
@@ -1239,6 +1250,7 @@ def gmail_send():
     emails = Emails.query.filter_by(user_id=user_id).all()
     if not emails:
         print("Emails not found in db. Try again?")
+        socketio.emit('receiver', {'message': 'Emails not found in db. Try again?'})
         return
 
     # Filter events then send to API to find id
@@ -1270,7 +1282,7 @@ def gmail_send():
             db.session.delete(email_to_send)
             db.session.commit()
         except Exception as e:
-            db_failure_message = f"Error removing draft from db. {e}"
+            db_failure_message = f"Error removing draft from db. Try again?"
             print(db_failure_message, file=sys.stderr)
             add_chat_response_to_history(session['history_id'], db_failure_message)
             socketio.emit('receiver', {'message': db_failure_message})
@@ -1321,7 +1333,7 @@ def gmail_delete():
             db.session.delete(draft_to_delete)
             db.session.commit()
         except Exception as e:
-            db_failure_message = f"Error deleting draft in db. {e}"
+            db_failure_message = f"Error deleting draft in db. Try again?"
             print(db_failure_message, file=sys.stderr)
             add_chat_response_to_history(session['history_id'], db_failure_message)
             socketio.emit('receiver', {'message': db_failure_message})

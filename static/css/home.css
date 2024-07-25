@@ -121,8 +121,13 @@ h1, h2, p, .navbar a, footer {
     color: white;
 }
 .nav-link {
-    margin-left: 30px;
+   margin-top: 20px;
+   margin-left: 30px;
     
+}
+.navbar img {
+    width: 5%;
+    margin-top: -20px;
 }
 .btn {
     pointer-events: auto;
@@ -133,19 +138,26 @@ h1, h2, p, .navbar a, footer {
 }
 
 #intro-container h1{
+    font-family: "Orbitron", sans-serif;
     font-size: 120px;
     color: white;
-    color: white;
+    
+}
+#intro-container img {
+    width: 35%;
+    margin-bottom: 45px;
+    margin-left: 2px;
 }
 #intro-container p{
     font-size: 25px;
     color: white;
 }
 #second-title h1 {
+    font-family: "Orbitron", sans-serif;
     font-size: 80px;
     margin: 5% 0;
     color: white;
-    color: white;
+    
 }
 #intro-container {
     min-height: 100vh;
@@ -159,9 +171,15 @@ h1, h2, p, .navbar a, footer {
     pointer-events: auto;
     pointer-events: auto;
 }
+.color-container h2 {
+    font-family: "Orbitron", sans-serif;
+}
 #arrow {
-    position: absolute;
-    top: 100%;
+    transform: translate(-25%, 450%);
+    min-width: 120%;
+    height: 40%;
+    margin-top: 100px;
+    
 
 }
 
@@ -169,12 +187,12 @@ h1, h2, p, .navbar a, footer {
 #info-container h2 {
     font-size: 45px;
     color: white;
-    color: white;
+    
 }
 #info-container p {
     font-size: 20px;
     color: white;
-    color: white;
+    
 }
 #info-container {
     height: 40vh;

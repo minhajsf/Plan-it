@@ -57,6 +57,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    z-index: 1000;
 }
 .icon-button {
     width: 35px;
@@ -91,7 +92,7 @@ body {
 }
 .help {
     width: 80%;
-    height: 80%;
+    height: 70%;
 }
 .settings {
     width: 50%;
@@ -114,7 +115,7 @@ body {
     color: white;
 }
 #help hr, #settings hr {
-    border: 1px solid #ffffff31;
+    border: 1px solid #000000;
 }
 .close-button:hover {
     color: red;
@@ -154,6 +155,7 @@ body {
 .popup-body {
     padding: 10px 15px;
     text-align: left;
+    
 }
 .popup-body button {
     text-align: right;
@@ -368,4 +370,47 @@ body {
 }
 #outputText { 
     display: none; 
+}
+
+/* this is all for the email stuff */
+.button-container button {
+    background-color: transparent;
+    border: 1px solid white;
+    color: white;
+    border-radius: 4px; 
+    padding: 10px 20px; 
+    font-size: 16px; 
+    cursor: pointer; 
+    transition: background-color 0.3s ease;
+    height: 45px; 
+    margin-top: 10px;
+}
+
+.button-container button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+#body-field  {
+    background: transparent;
+    border: 1px solid white;
+    width: 500px;
+    height: 200px;
+}
+#subject-field {
+    background: transparent;
+    border: 1px solid white;
+    width: 435px;
+}
+#to-field {
+    background: transparent;
+    border: 1px solid white;
+    width: 473px;
+}
+
+.disabled-button {
+    background-color: #d3d3d3; /* Light gray color */
+    color: #a9a9a9; /* Darker gray text color */
+    cursor: not-allowed;
+    border: 1px solid #a9a9a9;
+    opacity: 0.6;
+    pointer-events: none; /* Prevent clicks */
 }
