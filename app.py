@@ -8,6 +8,7 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_behind_proxy import FlaskBehindProxy
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from flask_login import LoginManager, login_user, logout_user, current_user, login_required
 from forms import RegistrationForm, LoginForm
 from functools import wraps
 import socketio
@@ -15,7 +16,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 import openai
 from db import db, Users, Events, Meets, Emails
-
+import gevent
 import logging
 
 # Google Imports
@@ -34,12 +35,15 @@ from google.apps import meet_v2
 
 # Flask App setup
 app = Flask(__name__)
-socketio = SocketIO(app)
+socketio = SocketIO(app,
+                    logger=True,
+                    engineio_logger=True,
+                    cors_allowed_origins="*"
+                    )
 load_dotenv()
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 proxied = FlaskBehindProxy(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
-
 
 # Database setup
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///plan-it.db'
@@ -49,6 +53,10 @@ migrate = Migrate(app, db)
 db.init_app(app)
 with app.app_context():
     db.create_all()
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
 
 # ChatGPT API Setup
 client = OpenAI(
@@ -61,6 +69,11 @@ SCOPES = [
     'https://www.googleapis.com/auth/gmail.modify',
     'https://www.googleapis.com/auth/gmail.readonly'
 ]
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return Users.query.get(int(user_id))
 
 
 @app.route("/register", methods=['GET', 'POST'])
@@ -88,7 +101,8 @@ def login():
     if form.validate_on_submit():
         user = Users.query.filter_by(email=form.email.data).first()
         if user and user.check_password(form.password.data):
-            session['user_id'] = user.user_id
+            login_user(user)
+            session['user_id'] = user.id
             flash(f'Login successful for {form.email.data}', 'success')
             return redirect(url_for('chat'))
         else:
@@ -100,21 +114,21 @@ def login():
 @app.route("/logout")
 def logout():
     app.logger.debug('Logout route accessed')
+    logout_user()
     session.pop('user_id', None)
-    print("User ID after logout:", session.get('user_id'))
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
 
 
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            flash('Please log in to access this page.', 'warning')
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
+# def login_required(f):
+#     @wraps(f)
+#     def decorated_function(*args, **kwargs):
+#         if 'user_id' not in session:
+#             flash('Please log in to access this page.', 'warning')
+#             return redirect(url_for('login'))
+#         return f(*args, **kwargs)
 
-    return decorated_function
+#     return decorated_function
 
 
 @app.route('/')
@@ -166,7 +180,7 @@ def handle_disconnect():
 
 # Get user's token.json from db record. Return None if none exists
 def get_user_token(uid):
-    user = Users.query.filter_by(user_id=uid).first()
+    user = Users.query.filter_by(id=uid).first()
     if user and user.token:
         user_token = json.loads(user.token)
         return Credentials.from_authorized_user_info(user_token)
@@ -175,7 +189,7 @@ def get_user_token(uid):
 
 # Save user's token.json to db record
 def save_user_token(uid, creds):
-    user = Users.query.filter_by(user_id=uid).first()
+    user = Users.query.filter_by(id=uid).first()
     if user:
         user.token = creds.to_json()
         db.session.commit()
@@ -220,7 +234,6 @@ def google_setup():
             print(f"Failed to set up Google Calendar service: {e}")
 
 
-
 def gmail_setup():
     if not hasattr(g, 'email'):
         try:
@@ -229,8 +242,8 @@ def gmail_setup():
         except Exception as e:
             print(f"Failed to set up Gmail service: {e}")
 
-def determine_query_type(message: str):
 
+def determine_query_type(message: str):
     app.logger.debug('Determine query accessed')
 
     result = {"event_type": "unknown", "mode": "unknown"}  # Default result
@@ -394,7 +407,6 @@ def handle_user_prompt(prompt):
         google_setup()
         gmail_setup()
 
-
         # Send success message to chat reciever-end
         print(f"Event Type: {event_type}, Mode: {mode}")
             
@@ -417,6 +429,7 @@ def handle_user_prompt(prompt):
               GMeet -> (Create, Update, or Remove), or Gmail -> (Create, Update, Send, and Delete)"""
         print("Exception thrown in handle_user_prompt at bottom try-catch",
               file=sys.stderr)
+        socketio.emit('receiver', {'message': failure_message})
         print(f"Error: {e}", file=sys.stderr)
         return failure_message
 
@@ -456,7 +469,7 @@ def remove_event(service, event_id):
 def format_system_instructions_for_event(query_type_dict: dict, content_dict: dict = None) -> str:
     timeZone = get_localzone()
     current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    
+
     summary = content_dict.get('summary') if content_dict else '<summary_here>'
     description = content_dict.get(
         'description') if content_dict else '<extra specifications, locations, and descriptions here>'
@@ -911,7 +924,6 @@ def gmeet_update():
 
         meeting.link = event.get('htmlLink')
 
-
         db.session.commit()
     except Exception as e:
         db_failure_message = f"Error updating meeting in db. Try again?"
@@ -1103,7 +1115,9 @@ def handle_approval_response(response):
     gmail_setup()
     status = response.get('status')
     email_json = response.get('email')
+
     message = 'Draft was not saved, quitting'
+  
     if email_json and (status == 'save' or status == 'send'):
         email_raw = email_json_to_raw(email_json)
 
@@ -1266,5 +1280,6 @@ def webhook():
     else:
         return 'Wrong event type', 400
 
+
 if __name__ == "__main__":
-    socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
+    socketio.run(app, debug=False, port=5000)
