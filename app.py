@@ -15,6 +15,7 @@ import socketio
 from dotenv import load_dotenv
 from openai import OpenAI
 import openai
+from email.message import EmailMessage
 from db import db, Users, Events, Meets, Emails
 
 import logging
@@ -35,12 +36,15 @@ from google.apps import meet_v2
 
 # Flask App setup
 app = Flask(__name__)
-socketio = SocketIO(app)
+socketio = SocketIO(app,
+                    logger=True,
+                    engineio_logger=True,
+                    cors_allowed_origins="*"
+                    )
 load_dotenv()
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 proxied = FlaskBehindProxy(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
-
 
 # Database setup
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///plan-it.db'
@@ -67,9 +71,11 @@ SCOPES = [
     'https://www.googleapis.com/auth/gmail.readonly'
 ]
 
+
 @login_manager.user_loader
 def load_user(user_id):
     return Users.query.get(int(user_id))
+
 
 @app.route("/register", methods=['GET', 'POST'])
 def register():
@@ -97,7 +103,7 @@ def login():
         user = Users.query.filter_by(email=form.email.data).first()
         if user and user.check_password(form.password.data):
             login_user(user)
-            session['user_id'] = user.id 
+            session['user_id'] = user.id
             flash(f'Login successful for {form.email.data}', 'success')
             return redirect(url_for('chat'))
         else:
@@ -467,7 +473,7 @@ def remove_event(service, event_id):
 def format_system_instructions_for_event(query_type_dict: dict, content_dict: dict = None) -> str:
     timeZone = get_localzone()
     current_datetime = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    
+
     summary = content_dict.get('summary') if content_dict else '<summary_here>'
     description = content_dict.get(
         'description') if content_dict else '<extra specifications, locations, and descriptions here>'
@@ -1024,13 +1030,13 @@ def email_json_to_raw(email_json):
     cc_field = ', '.join(email_json.get('cc')) if email_json.get('cc') else ''
 
     raw_email = f"""From: {from_field}
-To: {to_field}
-Cc: {cc_field}
-Subject: {email_json['subject']}
-Content-Type: text/plain; charset="UTF-8"
+    To: {to_field}
+    Cc: {cc_field}
+    Subject: {email_json['subject']}
+    Content-Type: text/plain; charset="UTF-8"
 
-{email_json['body']}
-"""
+    {email_json['body']}
+    """
     return raw_email
 
 
@@ -1093,6 +1099,7 @@ def send_gmail_draft(service, draft_id):
         # draft =
         service.users().drafts().send(
             userId='me', body={'id': draft_id}).execute()
+        emit('receiver', {'message': 'Draft sent successfully'})
         print("Draft sent successfully")
         # return draft
     except Exception as e:
