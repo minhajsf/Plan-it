@@ -397,9 +397,7 @@ def handle_user_prompt(prompt):
 
         # Send success message to chat reciever-end
         print(f"Event Type: {event_type}, Mode: {mode}")
-        user_mode = mode.capitalize()
-        if mode != "send":
-            user_mode = mode[:-1]
+            
         if event_type == "gmeet":
             user_event = "Google Meeting"
         elif event_type == "gcal":
@@ -408,7 +406,7 @@ def handle_user_prompt(prompt):
             user_event = "Gmail draft"
 
 
-        socketio.emit('receiver', {'message': f"Sure thing! {user_mode}ing your {user_event}..."})
+        socketio.emit('receiver', {'message': f"Sure thing! Activating {mode} mode to process your {user_event} at light speed..."})
 
         success_message = eval(f"{event_type}_{mode}()")
 
@@ -530,8 +528,9 @@ def gcal_create():
         db.session.add(new_event)
         db.session.commit()
     except Exception as e:
-        db_failure_message = f"Error creating event in db. {e}"
+        db_failure_message = f"Error creating event in db. Try again?"
         print(db_failure_message, file=sys.stderr)
+        print(e, file=sys.stderr)
         socketio.emit('receiver', {'message': db_failure_message})
 
     event_description = f"""Event Created! Check your Google Calendar to confirm!\n
@@ -617,7 +616,7 @@ def gcal_update():
 
         db.session.commit()
     except Exception as e:
-        db_failure_message = f"Error updating event in db. {e}"
+        db_failure_message = f"Error updating event in db. Try again?"
         print(db_failure_message, file=sys.stderr)
         socketio.emit('receiver', {'message': db_failure_message})
 
@@ -685,7 +684,7 @@ def gcal_remove():
         db.session.delete(event)
         db.session.commit()
     except Exception as e:
-        db_failure_message = f"Error deleting event in db. {e}"
+        db_failure_message = f"Error deleting event in db. Try again?"
         print(db_failure_message, file=sys.stderr)
         socketio.emit('receiver', {'message': db_failure_message})
 
@@ -824,7 +823,7 @@ def gmeet_create():
         db.session.add(new_meeting)
         db.session.commit()
     except Exception as e:
-        db_failure_message = f"Error creating meeting in db. {e}"
+        db_failure_message = f"Error creating meeting in db. Try again?"
         print(db_failure_message, file=sys.stderr)
         socketio.emit('receiver', {'message': db_failure_message})
 
@@ -915,7 +914,7 @@ def gmeet_update():
 
         db.session.commit()
     except Exception as e:
-        db_failure_message = f"Error updating meeting in db. {e}"
+        db_failure_message = f"Error updating meeting in db. Try again?"
         print(db_failure_message, file=sys.stderr)
         socketio.emit('receiver', {'message': db_failure_message})
 
@@ -979,7 +978,7 @@ def gmeet_remove():
         db.session.delete(meeting_to_remove)
         db.session.commit()
     except Exception as e:
-        db_failure_message = f"Error deleting meeting in db. {e}"
+        db_failure_message = f"Error deleting meeting in db. Try again"
         print(db_failure_message, file=sys.stderr)
         socketio.emit('receiver', {'message': db_failure_message})
 
@@ -1104,6 +1103,7 @@ def handle_approval_response(response):
     gmail_setup()
     status = response.get('status')
     email_json = response.get('email')
+    message = 'Draft was not saved, quitting'
     if email_json and (status == 'save' or status == 'send'):
         email_raw = email_json_to_raw(email_json)
 
@@ -1113,7 +1113,7 @@ def handle_approval_response(response):
         draft_id = draft.get('id')
         if status == 'send':
             send_gmail_draft(g.email, draft_id)
-
+            message = "Gmail draft was set successfully"
             print("Gmail draft sent successfully")
 
         elif status == 'save':
@@ -1132,6 +1132,8 @@ def handle_approval_response(response):
             )
             db.session.add(newly_drafted_email)
             db.session.commit()
+            message = "Gmail draft was saved successfully"
+    socketio.emit('receiver', {'message': message})
 
     # technically there is a 'quit' but it's not anywhere, so we just ignore the data
 
@@ -1167,6 +1169,7 @@ def gmail_send():
     emails = Emails.query.filter_by(user_id=user_id).all()
     if not emails:
         print("Emails not found in db. Try again?")
+        socketio.emit('receiver', {'message': 'Emails not found in db. Try again?'})
         return
 
     # Filter events then send to API to find id
@@ -1198,7 +1201,7 @@ def gmail_send():
             db.session.delete(email_to_send)
             db.session.commit()
         except Exception as e:
-            db_failure_message = f"Error removing draft from db. {e}"
+            db_failure_message = f"Error removing draft from db. Try again?"
             print(db_failure_message, file=sys.stderr)
             socketio.emit('receiver', {'message': db_failure_message})
 
@@ -1248,7 +1251,7 @@ def gmail_delete():
             db.session.delete(draft_to_delete)
             db.session.commit()
         except Exception as e:
-            db_failure_message = f"Error deleting draft in db. {e}"
+            db_failure_message = f"Error deleting draft in db. Try again?"
             print(db_failure_message, file=sys.stderr)
             socketio.emit('receiver', {'message': db_failure_message})
 
