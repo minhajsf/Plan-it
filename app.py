@@ -1119,7 +1119,7 @@ def email_json_to_raw(email_json):
 
     # Convert message to raw string
     raw_email = message.as_string()
-
+    
     return raw_email
 
 
@@ -1204,7 +1204,10 @@ def handle_approval_response(response):
     gmail_setup()
     status = response.get('status')
     email_json = response.get('email')
-    print(email_json)
+
+
+    print("EMAIL JSON", email_json)
+
 
     if email_json and (status == 'save' or status == 'send'):
         email_raw = email_json_to_raw(email_json)
