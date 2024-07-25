@@ -171,19 +171,19 @@ h1, h2, p, .navbar a, footer {
     pointer-events: auto;
     pointer-events: auto;
     margin-top: 100px;
+    position: relative;
 }
 .color-container h2 {
     font-family: "Orbitron", sans-serif;
 }
 #arrow {
-    transform: translate(-25%, 300%);
-    min-width: 120%;
-    height: 40%;
-    margin-top: 100px;
-    
-
+    position: absolute;
+    width: 60px !important;
+    height: 60px;
+    margin-right: 10px;
+    top: 95%;
+    left: 49%;
 }
-
 
 #info-container h2 {
     font-size: 45px;

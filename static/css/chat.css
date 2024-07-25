@@ -36,9 +36,6 @@ body {
 .preformatted {
     white-space: pre-wrap; 
 }
-.navbar {
-    
-}
 .navbar, .navbar a{
     color: white;
 }
