@@ -38,7 +38,8 @@ app = Flask(__name__)
 socketio = SocketIO(app,
                     logger=True,
                     engineio_logger=True,
-                    cors_allowed_origins="*"
+                    cors_allowed_origins="*",
+                    async_mode='eventlet'
                     )
 load_dotenv()
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
