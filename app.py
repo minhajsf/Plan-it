@@ -1027,16 +1027,19 @@ def get_authenticated_user_email(service):
 def email_json_to_raw(email_json):
     from_field = get_authenticated_user_email(g.email)  # Assuming `from_list` has a single email
     to_field = email_json['to']
-    cc_field = ', '.join(email_json.get('cc')) if email_json.get('cc') else ''
+    cc_field = email_json.get('cc', [])
 
-    raw_email = f"""From: {from_field}
-    To: {to_field}
-    Cc: {cc_field}
-    Subject: {email_json['subject']}
-    Content-Type: text/plain; charset="UTF-8"
+    # Create EmailMessage object
+    message = EmailMessage()
+    message['From'] = from_field
+    message['To'] = to_field
+    message['Cc'] = ', '.join(cc_field) if cc_field else ''
+    message['Subject'] = email_json['subject']
+    message.set_content(email_json['body'], subtype='plain', charset='utf-8')
 
-    {email_json['body']}
-    """
+    # Convert message to raw string
+    raw_email = message.as_string()
+
     return raw_email
 
 
