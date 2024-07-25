@@ -189,6 +189,35 @@ class Emails(db.Model):
             "link": self.link
 
         }
+    
+class ChatResponse(db.Model):
+    """
+    Table for Chat Responses
+    """
+
+    __tablename__ = "ChatResponses"
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer)
+    history_id = db.Column(db.Integer, db.ForeignKey('History.id'), nullable=False)
+    response = db.Column(db.String, nullable=False)
+
+    def __init__(self, user_id, response):
+        """
+        Initializes ChatResponse object.
+        """
+        self.user_id = user_id
+        self.response = response
+
+    def serialize(self):
+        """
+        Serializes a ChatResponse object.
+        """
+        return {
+            "id": self.id,
+            "response": self.response,
+        }
+
+
 class History(db.Model):
     """
     Table for History
@@ -198,23 +227,29 @@ class History(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer)
     user_prompt = db.Column(db.String, nullable=False)
-    chat_response = db.Column(db.String, nullable=False)
+    chat_responses = db.relationship('ChatResponse', backref='history', lazy=True, cascade="all, delete-orphan")
 
-    def __init__(self, **kwargs):
+    def __init__(self, user_id, user_prompt):
         """
-        Initializes Event object.
+        Initializes History object.
         """
-        self.user_id = kwargs.get("user_id", "")
-        self.user_prompt = kwargs.get("user_prompt", "")
-        self.chat_response = kwargs.get("chat_response", "")
+        self.user_id = user_id
+        self.user_prompt = user_prompt
 
     def serialize(self):
         """
-        Serializes an Event object.
+        Serializes a History object.
         """
         return {
             "id": self.id,
             "user_id": self.user_id,
             "user_prompt": self.user_prompt,
-            "chat_response": self.chat_response,
+            "chat_responses": [response.serialize() for response in self.chat_responses],
         }
+
+    def add_chat_response(self, user_id, response):
+        """
+        Adds a chat response to the history.
+        """
+        self.chat_responses.append(ChatResponse(user_id = user_id, response=response))
+

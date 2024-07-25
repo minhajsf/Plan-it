@@ -173,7 +173,6 @@ function appendMessage(message, sender) {
     messageElement.innerHTML = formatMessage(message);
     chatBox.appendChild(messageElement);
     chatBox.scrollTop = chatBox.scrollHeight;
-    chatHistory(); 
 }
 
 
@@ -211,9 +210,9 @@ const generalButtonHandler = function(status){
 
     if (emailContainer.children.length >= 3) {
        
-        const toDiv = emailContainer.children[0].lastElementChild;
-        const subjectDiv = emailContainer.children[1].lastElementChild;
-        const bodyDiv = emailContainer.children[2].lastElementChild;
+        const toDiv = emailContainer.children[0].children[0].lastElementChild;
+        const subjectDiv = emailContainer.children[1].children[0].lastElementChild;
+        const bodyDiv = emailContainer.children[2].children[0];
 
 
         if (toDiv && subjectDiv && bodyDiv) {
@@ -238,6 +237,7 @@ const generalButtonHandler = function(status){
                     'body': bodyDiv.value
                 }
             };
+            console.log(response)
             socket.emit('approval-request-response', response);
 
             console.log(response)
@@ -273,7 +273,9 @@ function createEmailDiv(fields) {
     toDiv.innerHTML = `
         <div class = "wrapper">
             <label for="to-field">To:</label>
+
             <input type="text" id="to-field" name="to-field" placeholder: "To" value="${fields.to}" required>
+
         </div>
     `;
 
@@ -322,11 +324,17 @@ function createEmailDiv(fields) {
 
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     
-    const chatHistory = localStorage.getItem('chatHistory');
-    if (chatHistory) {
-        chatBox.innerHTML = chatHistory;
+    const response = await fetch('/chat-history');
+    if (response.ok) {
+        const chatHistory = await response.json();
+        chatHistory.reverse().forEach(entry => {
+            appendMessage(entry.user_prompt, 'user');
+            entry.chat_responses.forEach(response => {
+                appendMessage(response.response, 'server');
+            });
+        });
     }
     
     startButton.style.display = 'inline-block';
@@ -366,7 +374,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket.on('request-approval', (email_json) => {
         // clearEmailContainers(); // Clear existing email containers before adding a new one
-        console.log(email_json)
         createEmailDiv(email_json);
 });
 
@@ -374,15 +381,36 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // this code is for the settings "clear" button
-document.getElementById('clearBtn').addEventListener('click', function() {
+document.getElementById('clearBtn').addEventListener('click', async function() {
     document.getElementById('confirmationDialog').style.display = 'block';
 });
 
-document.getElementById('confirmYes').addEventListener('click', function() {
+document.getElementById('confirmYes').addEventListener('click', async function() {
     console.log('Confirmed');
     document.getElementById('confirmationDialog').style.display = 'none';
     
     document.getElementById('secondDialog').style.display = 'block';
+
+    try {
+        const response = await fetch('/clear-history', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+            console.log(result.message);
+            chatBox.innerHTML = '';
+        } else {
+            console.error('Failed to clear history:', result.error);
+        }
+    } catch (error) {
+        console.error('Error clearing history:', error);
+    }
+
+    document.getElementById('secondDialog').style.display = 'none';
 });
 
 document.getElementById('confirmNo').addEventListener('click', function() {
