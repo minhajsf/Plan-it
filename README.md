@@ -71,7 +71,7 @@ To run, follow these steps:
    ```
    git clone <repository_url>
    ```
-2. **Create your virtual environment:** Set up your virtual environment (venv) using 'requirements.txt' as your dependency
+2. **Create your virtual environment:** Set up your virtual environment (venv) using 'requirements.txt' as your dependency:
    ```
    python -m venv .venv
    ```
@@ -83,11 +83,11 @@ To run, follow these steps:
    ```
    pip install <library_name_here>
    ```
-7. **Run your application:** Run app.py within your venv
+7. **Run your application:** Run app.py within your venv:
    ```
    python app.py
    ```
-8. **Acess the Application:** Go to your local host url in your web browser:
+8. **Access the Application:** Go to your local host url in your web browser:
    ```
    http://127.0.0.1:5000
    ```
